@@ -45,7 +45,6 @@ Thumbs.db
 *.log
 
 # uv
-uv.lock
 
 # Coverage
 .coverage
