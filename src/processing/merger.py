@@ -163,16 +163,6 @@ def combine_background_signal(
     return {**background, **signal}
 
 
-def assign_class(samples: dict[str, ak.Array]) -> None:
-    """Add an integer 'class' field to each sample in-place.
-
-    Args:
-        samples: Dict mapping sample IDs to awkward arrays.
-    """
-    for i, key in enumerate(samples):
-        samples[key]["class"] = i
-
-
 def dict_to_array(samples: dict[str, ak.Array]) -> ak.Array:
     """Concatenate all samples into a single awkward array.
 

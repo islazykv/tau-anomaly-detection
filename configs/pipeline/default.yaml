@@ -1,0 +1,8 @@
+name: "standard_training"
+save_model: true
+
+# Background-only train/val split ratio
+val_fraction: 0.2
+
+# PyTorch Lightning early stopping (patience in epochs)
+early_stopping_patience: 20

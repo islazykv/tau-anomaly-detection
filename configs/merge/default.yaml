@@ -1,0 +1,35 @@
+background_strategy: "as_primary"
+signal_strategy: "as_one"
+
+primary_groups:
+  topquarks:
+    - ttbar
+    - singletop
+    - ttX
+  wtaunu:
+    - wtaunu
+  ztautau:
+    - ztautau
+  diboson:
+    - diboson
+  other:
+    - wenu
+    - wmunu
+    - zee
+    - zmumu
+    - znunu
+
+display_labels:
+  topquarks: "top quarks"
+  wtaunu: "$W \\rightarrow \\tau\\nu$"
+  ztautau: "$Z \\rightarrow \\tau\\tau$"
+  diboson: "diboson"
+  other: "other"
+
+signal_type_names:
+  GG: gluinos
+  SS: squarks
+
+mass_thresholds:
+  gluinos: [1000, 1700]
+  squarks: [800, 1400]

@@ -1,0 +1,30 @@
+enabled: true
+
+samples:
+  - id: ttbar
+    label: "$t \\bar{t}$"
+  - id: wtaunu
+    label: "$W \\rightarrow \\tau\\nu$"
+  - id: wmunu
+    label: "$W \\rightarrow \\mu\\nu$"
+  - id: wenu
+    label: "$W \\rightarrow e \\nu$"
+  - id: ztautau
+    label: "$Z \\rightarrow \\tau\\tau$"
+  - id: zmumu
+    label: "$Z \\rightarrow \\mu\\mu$"
+  - id: zee
+    label: "$Z \\rightarrow ee$"
+  - id: znunu
+    label: "$Z \\rightarrow \\nu\\nu$"
+  - id: diboson
+    label: "diboson"
+  - id: higgs
+    label: "higgs"
+  - id: singletop
+    label: "singletop"
+  - id: ttX
+    label: "ttX"
+
+exclude:
+  - higgs

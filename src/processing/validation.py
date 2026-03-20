@@ -9,7 +9,7 @@ import pandera.pandas as pa
 
 log = logging.getLogger(__name__)
 
-METADATA_COLUMNS = {"class", "class_weight", "eventOrigin", "tau_n", "weight"}
+METADATA_COLUMNS = {"eventOrigin", "tau_n", "weight"}
 
 
 def _build_mc_schema(df: pd.DataFrame) -> pa.DataFrameSchema:
@@ -19,26 +19,17 @@ def _build_mc_schema(df: pd.DataFrame) -> pa.DataFrameSchema:
     dynamically validates all remaining columns as numeric training features.
     """
     columns: dict[str, pa.Column] = {
-        "class": pa.Column(int, pa.Check.ge(0), nullable=False),
-        "class_weight": pa.Column(float, pa.Check.gt(0), nullable=False),
         "eventOrigin": pa.Column(nullable=False),
         "tau_n": pa.Column(nullable=False),
         "weight": pa.Column(float, nullable=False),
     }
 
     # Every non-metadata column is a training feature: must be numeric, no nulls.
-    # Most features are float64, but scalar counters (jet_n, tau_ntracks, etc.)
-    # may remain int64 after rectangularization.
     feature_cols = sorted(set(df.columns) - METADATA_COLUMNS)
     for col in feature_cols:
         columns[col] = pa.Column(nullable=False)
 
     checks = [
-        # Class labels must form a contiguous range 0..n-1.
-        pa.Check(
-            lambda df: set(df["class"].unique()) == set(range(df["class"].nunique())),
-            error="Class labels are not a contiguous 0-based range",
-        ),
         # All training features must be numeric (int or float).
         pa.Check(
             lambda df: all(
@@ -53,7 +44,7 @@ def _build_mc_schema(df: pd.DataFrame) -> pa.DataFrameSchema:
     return pa.DataFrameSchema(
         columns=columns,
         checks=checks,
-        strict=False,  # allow unexpected extra columns
+        strict=False,
         coerce=False,
     )
 
@@ -81,9 +72,8 @@ def validate_mc(df: pd.DataFrame) -> pd.DataFrame:
     schema = _build_mc_schema(df)
     validated = schema.validate(df)
     log.info(
-        "MC validation passed: %d rows, %d features, %d classes",
+        "MC validation passed: %d rows, %d features",
         len(df),
         len(feature_cols),
-        df["class"].nunique(),
     )
     return validated

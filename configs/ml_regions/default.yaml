@@ -1,0 +1,22 @@
+model_type: "ae"
+
+thresholds:
+  control: 0.0
+  validation: 0.6
+  signal: 0.8
+
+score_plots:
+  bins: 50
+  scales: ["linear", "log"]
+  weighted: [false, true]
+
+significance:
+  bins: 20
+  bkg_uncertainty: 0.3
+
+kinematic_plots:
+  scale: "dual"
+  scale_factor: 1
+  include_data: false
+  include_signal: true
+  selected_signals: ["GG_1000_700", "GG_1300_700", "GG_1700_900", "GG_2200_1500", "GG_500_100", "SS_1000_45", "SS_1600_145", "SS_800_245"]

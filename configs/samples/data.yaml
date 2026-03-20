@@ -1,0 +1,5 @@
+enabled: true
+
+samples:
+  - id: data
+    label: "data"

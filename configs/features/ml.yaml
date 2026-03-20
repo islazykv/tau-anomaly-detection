@@ -1,0 +1,89 @@
+cleaning:
+  - eventClean
+  - isBadTile
+  - jet_isBadTight
+  - IsMETTrigPassed
+  - tau_JetRNNMedium
+
+truth:
+  - tau_isTruthMatchedTau
+  - tau_truthType
+
+weights:
+  - mcEventWeight
+  - pileupweight
+  - beamSpotWeight
+  - ele_weight
+  - mu_weight
+  - jvt_weight
+  - bjet_weight
+  - jet_btag_weight
+  - lumiweight
+
+tau:
+  - tau_n
+  - tau_pt
+  - tau_eta
+  - tau_phi
+  - tau_charge
+  - tau_ntracks
+  - tau_nIsolatedTracks
+  - tau_nAllTracks
+  - tau_width
+  - tau_jetpt
+  - tau_delPhiMet
+  - tau_mtMet
+  - tau_NNDecayMode
+
+jet:
+  - jet_n
+  - jet_n_btag
+  - jet_pt
+  - jet_eta
+  - jet_phi
+  - jet_mtMet
+  - jet_isBjet
+  - jet_jvt
+  - jet_delPhiMet
+  - jet_width
+
+kinematic:
+  - sumMTJet
+  - sumMTTauJet
+  - met
+  - met_phi
+  - METSig
+  - meff
+  - ht
+
+training:
+  - nVtx
+  - LeptonVeto
+
+channel_1:
+  - ele_n
+  - ele_pt
+  - ele_eta
+  - ele_phi
+  - ele_mtMet
+  - ele_charge
+  - mu_n
+  - mu_pt
+  - mu_eta
+  - mu_phi
+  - mu_mtMet
+  - mu_charge
+  - mu_author
+  - mu_muonType
+  - Mt2_taumu
+  - Mt2_tauel
+  - Mtaumu
+  - Mtauel
+
+channel_2:
+  - Mt2
+  - sumMT
+
+drop_extra:
+  - eventOrigin
+  - tau_n

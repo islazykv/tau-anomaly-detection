@@ -1,0 +1,8 @@
+run: "Run2"
+release: "R24"
+analysis_base: "25.2.28"
+campaigns:
+  - "MC20a"
+  - "MC20d"
+  - "MC20e"
+scope: "ML"

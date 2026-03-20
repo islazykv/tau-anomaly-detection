@@ -1,0 +1,4 @@
+data: "/disk/atlas3/data_MC/{analysis_base}/{campaign}/vector_XEplateau/{sample}.root"
+background: "/disk/atlas3/data_MC/{analysis_base}/{campaign}/vector_XEplateau/{sample}.root"
+signal: "/disk/atlas3/data_MC/{analysis_base}/{campaign}/vector_XEplateau/{sample}.root"
+tree_name: "NOMINAL"
