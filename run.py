@@ -55,17 +55,17 @@ def main(cfg: DictConfig) -> None:
             run_eda(cfg)
 
         case "train":
-            from src.models.pipeline import run_training
+            from src.pipelines.train import run_training
 
             run_training(cfg)
 
         case "evaluate":
-            from src.models.pipeline import run_evaluation
+            from src.pipelines.evaluate import run_evaluation
 
             run_evaluation(cfg)
 
         case "tune":
-            from src.models.pipeline import run_tuning
+            from src.pipelines.tune import run_tuning
 
             run_tuning(cfg)
 
