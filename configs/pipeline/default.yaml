@@ -6,3 +6,18 @@ val_fraction: 0.2
 
 # PyTorch Lightning early stopping (patience in epochs)
 early_stopping_patience: 20
+
+# Checkpoint: metric to monitor for best model
+monitor_metric: "val_loss"
+monitor_mode: "min"
+
+# Anomaly scoring
+anomaly_score: "reconstruction_error"  # reconstruction_error, elbo (VAE only)
+threshold_strategy: "percentile"        # percentile, std_dev
+threshold_percentile: 95.0              # if percentile strategy
+
+# MLflow tracking
+mlflow:
+  enabled: true
+  tracking_uri: "sqlite:///mlruns.db"
+  log_artifacts: true

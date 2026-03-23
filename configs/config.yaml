@@ -11,7 +11,7 @@ defaults:
   - samples@samples.background: background
   - samples@samples.signal: signal
   - samples@samples.data: data
-  - ml_regions: default
+
   - tuning: default
   - override hydra/job_logging: default
 

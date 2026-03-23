@@ -1,0 +1,35 @@
+# Variational Autoencoder model configuration
+name: "vae"
+
+# Architecture
+hidden_sizes: [128, 64, 32]
+latent_dim: 16
+dropout: 0.1
+activation: "relu"
+
+# Loss
+loss: "mse"
+reconstruction_loss: "mse"      # mse, smooth_l1, bce
+
+# Normalization
+normalization: "z_score"
+
+# VAE-specific
+beta: 1.0                        # KL divergence weight
+beta_schedule: "constant"        # constant, warmup
+beta_warmup_epochs: 20           # epochs to linearly ramp beta (if warmup)
+
+# Training
+n_epochs: 200
+batch_size: 2048
+learning_rate: 1.0e-3
+weight_decay: 1.0e-5
+
+# LR scheduler
+lr_scheduler: "reduce_on_plateau"
+lr_patience: 10
+lr_factor: 0.5
+lr_min: 1.0e-6
+
+# AMP
+amp: false

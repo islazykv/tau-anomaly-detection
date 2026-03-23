@@ -1,0 +1,29 @@
+# Autoencoder model configuration
+name: "ae"
+
+# Architecture
+hidden_sizes: [128, 64, 32]    # encoder layers (decoder mirrors)
+latent_dim: 16
+dropout: 0.1
+activation: "relu"              # relu, leaky_relu, elu, selu
+
+# Loss
+loss: "mse"                     # mse, smooth_l1, bce (bce requires min_max normalization)
+
+# Normalization
+normalization: "z_score"        # z_score, min_max
+
+# Training
+n_epochs: 200
+batch_size: 2048
+learning_rate: 1.0e-3
+weight_decay: 1.0e-5
+
+# LR scheduler
+lr_scheduler: "reduce_on_plateau"  # reduce_on_plateau, cosine_annealing, none
+lr_patience: 10
+lr_factor: 0.5
+lr_min: 1.0e-6
+
+# AMP
+amp: false
