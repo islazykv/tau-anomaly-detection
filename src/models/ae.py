@@ -8,6 +8,7 @@ from typing import Any
 import lightning as L
 import torch
 import torch.nn as nn
+from lightning.pytorch.utilities.types import OptimizerLRSchedulerConfig
 from torch import Tensor
 
 from src.models.config import AEConfig
@@ -107,13 +108,13 @@ class Autoencoder(L.LightningModule):
     # Optimizer & scheduler
     # ------------------------------------------------------------------
 
-    def configure_optimizers(self) -> dict[str, Any]:
+    def configure_optimizers(self) -> OptimizerLRSchedulerConfig:
         optimizer = torch.optim.AdamW(
             self.parameters(),
             lr=self.cfg.learning_rate,
             weight_decay=self.cfg.weight_decay,
         )
-        config: dict[str, Any] = {"optimizer": optimizer}
+        config: OptimizerLRSchedulerConfig = {"optimizer": optimizer}
 
         scheduler = _build_scheduler(optimizer, self.cfg)
         if scheduler is not None:

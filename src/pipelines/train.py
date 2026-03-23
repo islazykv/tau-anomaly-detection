@@ -33,11 +33,12 @@ def _build_model(
 ) -> L.LightningModule:
     """Instantiate AE or VAE based on cfg.model.name."""
     name = cfg.model.name
+    model_params = dict(OmegaConf.to_container(cfg.model, resolve=True))  # type: ignore[arg-type]
     if name == "ae":
-        model_cfg = AEConfig(**OmegaConf.to_container(cfg.model, resolve=True))
+        model_cfg = AEConfig(**model_params)
         return Autoencoder(model_cfg, n_features=n_features)
     if name == "vae":
-        model_cfg = VAEConfig(**OmegaConf.to_container(cfg.model, resolve=True))
+        model_cfg = VAEConfig(**model_params)
         return VariationalAutoencoder(model_cfg, n_features=n_features)
     msg = f"Unknown model: {name}"
     raise ValueError(msg)
@@ -77,7 +78,7 @@ def _build_trainer(
     )
 
 
-def run_training(cfg: DictConfig) -> None:
+def train(cfg: DictConfig) -> None:
     """Run the full training pipeline for AE or VAE.
 
     Steps:
@@ -132,17 +133,16 @@ def run_training(cfg: DictConfig) -> None:
         tracking_uri=cfg.pipeline.mlflow.tracking_uri,
         log_model=False,
     )
-    mlflow_logger.log_hyperparams(OmegaConf.to_container(cfg.model, resolve=True))
+    mlflow_logger.log_hyperparams(dict(OmegaConf.to_container(cfg.model, resolve=True)))  # type: ignore[arg-type]
 
     # Trainer
     trainer = _build_trainer(cfg, model_name, models_dir, mlflow_logger)
 
     # Fit
     trainer.fit(model, datamodule=dm)
-    log.info(
-        "Training complete — best checkpoint: %s",
-        trainer.checkpoint_callback.best_model_path,
-    )
+
+    best_path = getattr(trainer.checkpoint_callback, "best_model_path", None)
+    log.info("Training complete — best checkpoint: %s", best_path)
 
     # Save final checkpoint with scaler state
     ckpt_path = models_dir / f"{model_name}.ckpt"

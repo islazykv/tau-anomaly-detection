@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import lightning as L
 import torch
 import torch.nn as nn
+from lightning.pytorch.utilities.types import OptimizerLRSchedulerConfig
 from torch import Tensor
 
 from src.models.ae import ACTIVATIONS, _build_stack, _get_loss_fn, _build_scheduler
@@ -197,13 +197,13 @@ class VariationalAutoencoder(L.LightningModule):
     # Optimizer & scheduler
     # ------------------------------------------------------------------
 
-    def configure_optimizers(self) -> dict[str, Any]:
+    def configure_optimizers(self) -> OptimizerLRSchedulerConfig:
         optimizer = torch.optim.AdamW(
             self.parameters(),
             lr=self.cfg.learning_rate,
             weight_decay=self.cfg.weight_decay,
         )
-        config: dict[str, Any] = {"optimizer": optimizer}
+        config: OptimizerLRSchedulerConfig = {"optimizer": optimizer}
 
         scheduler = _build_scheduler(optimizer, self.cfg)
         if scheduler is not None:

@@ -9,7 +9,7 @@ from omegaconf import DictConfig
 log = logging.getLogger(__name__)
 
 
-def run_evaluation(cfg: DictConfig) -> None:
+def evaluate(cfg: DictConfig) -> None:
     """Run evaluation pipeline for a trained AE or VAE.
 
     Loads a trained checkpoint, runs prediction on background validation +
@@ -19,4 +19,4 @@ def run_evaluation(cfg: DictConfig) -> None:
     """
     model_name = cfg.model.name
     log.info("Starting %s evaluation", model_name.upper())
-    raise NotImplementedError("run_evaluation will be implemented in Phase 5")
+    raise NotImplementedError("evaluate will be implemented in Phase 5")

@@ -40,34 +40,34 @@ def main(cfg: DictConfig) -> None:
 
     match stage:
         case "preprocess":
-            from src.processing.pipeline import run_preprocessing
+            from src.pipelines.preprocess import preprocess
 
-            run_preprocessing(cfg)
+            preprocess(cfg)
 
         case "feature_engineer":
-            from src.processing.pipeline import run_feature_engineering
+            from src.pipelines.feature_engineer import feature_engineer
 
-            run_feature_engineering(cfg)
+            feature_engineer(cfg)
 
         case "eda":
-            from src.eda.pipeline import run_eda
+            from src.pipelines.eda import eda
 
-            run_eda(cfg)
+            eda(cfg)
 
         case "train":
-            from src.pipelines.train import run_training
+            from src.pipelines.train import train
 
-            run_training(cfg)
+            train(cfg)
 
         case "evaluate":
-            from src.pipelines.evaluate import run_evaluation
+            from src.pipelines.evaluate import evaluate
 
-            run_evaluation(cfg)
+            evaluate(cfg)
 
         case "tune":
-            from src.pipelines.tune import run_tuning
+            from src.pipelines.tune import tune
 
-            run_tuning(cfg)
+            tune(cfg)
 
         case "serve":
             from src.serving.app import run_server
