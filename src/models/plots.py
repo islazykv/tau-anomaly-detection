@@ -1,0 +1,495 @@
+"""Diagnostic and evaluation plots for AE/VAE anomaly detection."""
+
+from __future__ import annotations
+
+import logging
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+log = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Step 33 — Training diagnostics
+# ---------------------------------------------------------------------------
+
+
+def plot_loss(
+    train_loss: list[float],
+    val_loss: list[float],
+    title: str = "Training Loss",
+) -> plt.Figure:
+    """Plot train and validation loss curves."""
+    fig, ax = plt.subplots()
+    epochs = range(1, len(train_loss) + 1)
+    ax.plot(epochs, train_loss, label="Train")
+    ax.plot(epochs, val_loss, label="Validation")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Loss")
+    ax.set_title(title)
+    ax.legend()
+    return fig
+
+
+def plot_loss_components(
+    recon_loss: list[float],
+    kl_loss: list[float],
+    beta_values: list[float] | None = None,
+    title: str = "VAE Loss Components",
+) -> plt.Figure:
+    """Plot VAE reconstruction and KL loss components."""
+    epochs = range(1, len(recon_loss) + 1)
+    n_panels = 3 if beta_values is not None else 2
+    fig, axes = plt.subplots(1, n_panels, figsize=(5 * n_panels, 4))
+
+    axes[0].plot(epochs, recon_loss)
+    axes[0].set_xlabel("Epoch")
+    axes[0].set_ylabel("Reconstruction Loss")
+    axes[0].set_title("Reconstruction")
+
+    axes[1].plot(epochs, kl_loss)
+    axes[1].set_xlabel("Epoch")
+    axes[1].set_ylabel("KL Divergence")
+    axes[1].set_title("KL")
+
+    if beta_values is not None:
+        axes[2].plot(epochs, beta_values)
+        axes[2].set_xlabel("Epoch")
+        axes[2].set_ylabel("Beta")
+        axes[2].set_title("Beta Schedule")
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    return fig
+
+
+def plot_reconstruction_error(
+    bkg_scores: np.ndarray,
+    sig_scores: np.ndarray,
+    threshold: float | None = None,
+    title: str = "Reconstruction Error Distribution",
+    n_bins: int = 100,
+) -> plt.Figure:
+    """Plot reconstruction error distributions for background vs signal."""
+    fig, ax = plt.subplots()
+    ax.hist(bkg_scores, bins=n_bins, alpha=0.6, label="Background", density=True)
+    ax.hist(sig_scores, bins=n_bins, alpha=0.6, label="Signal", density=True)
+    if threshold is not None:
+        ax.axvline(
+            threshold, color="red", linestyle="--", label=f"Threshold = {threshold:.4f}"
+        )
+    ax.set_xlabel("Reconstruction Error")
+    ax.set_ylabel("Density")
+    ax.set_title(title)
+    ax.legend()
+    ax.set_yscale("log")
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Step 34 — Reconstruction plots
+# ---------------------------------------------------------------------------
+
+
+def plot_reconstruction_performance(
+    x_original: np.ndarray,
+    x_reconstructed: np.ndarray,
+    feature_names: list[str],
+    event_idx: int = 0,
+    title: str = "Single Event Reconstruction",
+) -> plt.Figure:
+    """Bar chart comparing original vs reconstructed features for one event."""
+    fig, ax = plt.subplots(figsize=(max(8, len(feature_names) * 0.4), 5))
+    x_pos = np.arange(len(feature_names))
+    width = 0.35
+
+    ax.bar(x_pos - width / 2, x_original, width, label="Original", alpha=0.8)
+    ax.bar(x_pos + width / 2, x_reconstructed, width, label="Reconstructed", alpha=0.8)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(feature_names, rotation=90, fontsize=7)
+    ax.set_ylabel("Feature Value")
+    ax.set_title(f"{title} (event {event_idx})")
+    ax.legend()
+    fig.tight_layout()
+    return fig
+
+
+def plot_reconstruction_comparison(
+    ae_scores: np.ndarray,
+    vae_scores: np.ndarray,
+    labels: np.ndarray,
+    title: str = "AE vs VAE Reconstruction Error",
+    n_bins: int = 80,
+) -> plt.Figure:
+    """Side-by-side reconstruction error distributions for AE and VAE."""
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
+
+    for ax, scores, name in zip(axes, [ae_scores, vae_scores], ["AE", "VAE"]):
+        bkg = scores[labels == 0]
+        sig = scores[labels == 1]
+        ax.hist(bkg, bins=n_bins, alpha=0.6, label="Background", density=True)
+        ax.hist(sig, bins=n_bins, alpha=0.6, label="Signal", density=True)
+        ax.set_xlabel("Reconstruction Error")
+        ax.set_ylabel("Density")
+        ax.set_title(name)
+        ax.legend()
+        ax.set_yscale("log")
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    return fig
+
+
+def plot_feature_histograms(
+    x_original: np.ndarray,
+    x_reconstructed: np.ndarray,
+    feature_names: list[str],
+    n_cols: int = 4,
+    n_bins: int = 50,
+    title: str = "Feature Distributions: Original vs Reconstructed",
+) -> plt.Figure:
+    """Per-feature histograms comparing original and reconstructed values."""
+    n_features = len(feature_names)
+    n_rows = (n_features + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
+    axes_flat = axes.flatten() if n_features > 1 else [axes]
+
+    for i, (ax, name) in enumerate(zip(axes_flat, feature_names)):
+        ax.hist(
+            x_original[:, i], bins=n_bins, alpha=0.6, label="Original", density=True
+        )
+        ax.hist(
+            x_reconstructed[:, i],
+            bins=n_bins,
+            alpha=0.6,
+            label="Reconstructed",
+            density=True,
+        )
+        ax.set_title(name, fontsize=8)
+        ax.legend(fontsize=6)
+
+    for ax in axes_flat[n_features:]:
+        ax.set_visible(False)
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Step 35 — VAE latent diagnostics
+# ---------------------------------------------------------------------------
+
+
+def plot_latent_histograms(
+    z: np.ndarray,
+    labels: np.ndarray | None = None,
+    n_cols: int = 4,
+    title: str = "Latent Dimension Histograms",
+) -> plt.Figure:
+    """Histogram of each latent dimension, optionally colored by label."""
+    latent_dim = z.shape[1]
+    n_rows = (latent_dim + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
+    axes_flat = axes.flatten() if latent_dim > 1 else [axes]
+
+    for i, ax in enumerate(axes_flat[:latent_dim]):
+        if labels is not None:
+            for lbl, name in [(0, "Background"), (1, "Signal")]:
+                ax.hist(
+                    z[labels == lbl, i], bins=50, alpha=0.6, label=name, density=True
+                )
+            ax.legend(fontsize=6)
+        else:
+            ax.hist(z[:, i], bins=50, alpha=0.7, density=True)
+        ax.set_title(f"z[{i}]", fontsize=8)
+
+    for ax in axes_flat[latent_dim:]:
+        ax.set_visible(False)
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    return fig
+
+
+def plot_latent_space_2d(
+    embedding: np.ndarray,
+    labels: np.ndarray,
+    method: str = "t-SNE",
+    title: str | None = None,
+) -> plt.Figure:
+    """2D scatter plot of latent space embedding colored by label."""
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for lbl, name, color in [(0, "Background", "C0"), (1, "Signal", "C1")]:
+        mask = labels == lbl
+        ax.scatter(
+            embedding[mask, 0],
+            embedding[mask, 1],
+            s=2,
+            alpha=0.3,
+            label=name,
+            color=color,
+        )
+    ax.set_xlabel(f"{method} 1")
+    ax.set_ylabel(f"{method} 2")
+    ax.set_title(title or f"Latent Space ({method})")
+    ax.legend(markerscale=5)
+    return fig
+
+
+def plot_latent_pairplot(
+    z: np.ndarray,
+    labels: np.ndarray,
+    max_dims: int = 6,
+    title: str = "Latent Pairplot",
+) -> plt.Figure:
+    """Pairplot of first ``max_dims`` latent dimensions."""
+    dims = min(z.shape[1], max_dims)
+    df = pd.DataFrame(z[:, :dims], columns=[f"z[{i}]" for i in range(dims)])
+    df["label"] = np.where(labels == 0, "Background", "Signal")
+
+    g = sns.pairplot(df, hue="label", plot_kws={"s": 5, "alpha": 0.3}, corner=True)
+    g.figure.suptitle(title, y=1.02)
+    return g.figure
+
+
+def plot_latent_mean_histograms(
+    mu: np.ndarray,
+    n_cols: int = 4,
+    title: str = "Latent Mean (mu) Histograms",
+) -> plt.Figure:
+    """Histogram of mu per latent dimension."""
+    return _plot_per_dim_histograms(mu, n_cols=n_cols, title=title, dim_prefix="mu")
+
+
+def plot_latent_mean_spread(
+    mu: np.ndarray,
+    title: str = "Latent Mean Spread per Dimension",
+) -> plt.Figure:
+    """Variance of mu per dimension. Warns if var < 0.1 (potential collapse)."""
+    variances = mu.var(axis=0)
+    fig, ax = plt.subplots()
+    dims = np.arange(len(variances))
+    colors = ["red" if v < 0.1 else "C0" for v in variances]
+    ax.bar(dims, variances, color=colors)
+    ax.axhline(0.1, color="red", linestyle="--", alpha=0.5, label="Collapse threshold")
+    ax.set_xlabel("Latent Dimension")
+    ax.set_ylabel("Var(mu)")
+    ax.set_title(title)
+    ax.legend()
+
+    n_collapsed = (variances < 0.1).sum()
+    if n_collapsed > 0:
+        log.warning(
+            "%d latent dimensions with mu.var < 0.1 (potential collapse)", n_collapsed
+        )
+    return fig
+
+
+def plot_logvar_histograms(
+    logvar: np.ndarray,
+    n_cols: int = 4,
+    title: str = "Log-Variance Histograms",
+) -> plt.Figure:
+    """Histogram of logvar per latent dimension."""
+    return _plot_per_dim_histograms(
+        logvar, n_cols=n_cols, title=title, dim_prefix="logvar"
+    )
+
+
+def plot_logvar_spread(
+    logvar: np.ndarray,
+    title: str = "Log-Variance Spread per Dimension",
+) -> plt.Figure:
+    """Mean logvar per dimension. Warns if logvar < -5 (potential collapse)."""
+    means = logvar.mean(axis=0)
+    fig, ax = plt.subplots()
+    dims = np.arange(len(means))
+    colors = ["red" if m < -5 else "C0" for m in means]
+    ax.bar(dims, means, color=colors)
+    ax.axhline(-5, color="red", linestyle="--", alpha=0.5, label="Collapse threshold")
+    ax.set_xlabel("Latent Dimension")
+    ax.set_ylabel("Mean(logvar)")
+    ax.set_title(title)
+    ax.legend()
+
+    n_collapsed = (means < -5).sum()
+    if n_collapsed > 0:
+        log.warning(
+            "%d latent dimensions with logvar < -5 (potential collapse)", n_collapsed
+        )
+    return fig
+
+
+def plot_mu_vs_logvar(
+    mu: np.ndarray,
+    logvar: np.ndarray,
+    title: str = "Mu vs Logvar per Dimension",
+) -> plt.Figure:
+    """Scatter of mean(mu) vs mean(logvar) per latent dimension."""
+    mu_means = mu.mean(axis=0)
+    logvar_means = logvar.mean(axis=0)
+
+    fig, ax = plt.subplots()
+    ax.scatter(mu_means, logvar_means, s=40)
+    for i, (x, y) in enumerate(zip(mu_means, logvar_means)):
+        ax.annotate(str(i), (x, y), fontsize=7, ha="center", va="bottom")
+    ax.set_xlabel("Mean(mu)")
+    ax.set_ylabel("Mean(logvar)")
+    ax.set_title(title)
+    ax.axhline(0, color="grey", linestyle=":", alpha=0.5)
+    ax.axvline(0, color="grey", linestyle=":", alpha=0.5)
+    return fig
+
+
+def plot_kl_per_dimension(
+    kl_per_dim: np.ndarray,
+    title: str = "KL Divergence per Latent Dimension",
+) -> plt.Figure:
+    """Bar chart of mean KL per latent dimension."""
+    fig, ax = plt.subplots()
+    ax.bar(np.arange(len(kl_per_dim)), kl_per_dim)
+    ax.set_xlabel("Latent Dimension")
+    ax.set_ylabel("Mean KL Divergence")
+    ax.set_title(title)
+    return fig
+
+
+def plot_sampled_latent_space(
+    z_sampled: np.ndarray,
+    z_encoded: np.ndarray,
+    title: str = "Sampled vs Encoded Latent Space",
+) -> plt.Figure:
+    """Compare sampled (from prior) and encoded latent vectors (first 2 dims)."""
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.scatter(
+        z_encoded[:, 0], z_encoded[:, 1], s=2, alpha=0.3, label="Encoded", color="C0"
+    )
+    ax.scatter(
+        z_sampled[:, 0],
+        z_sampled[:, 1],
+        s=2,
+        alpha=0.3,
+        label="Sampled (prior)",
+        color="C1",
+    )
+    ax.set_xlabel("z[0]")
+    ax.set_ylabel("z[1]")
+    ax.set_title(title)
+    ax.legend(markerscale=5)
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Step 36 — Evaluation plots
+# ---------------------------------------------------------------------------
+
+
+def plot_roc_curve(
+    fpr: np.ndarray,
+    tpr: np.ndarray,
+    auc: float,
+    title: str = "ROC Curve",
+) -> plt.Figure:
+    """Plot ROC curve with AUC annotation."""
+    fig, ax = plt.subplots()
+    ax.plot(fpr, tpr, label=f"AUC = {auc:.4f}")
+    ax.plot([0, 1], [0, 1], "k--", alpha=0.3)
+    ax.set_xlabel("Background Efficiency (FPR)")
+    ax.set_ylabel("Signal Efficiency (TPR)")
+    ax.set_title(title)
+    ax.legend()
+    return fig
+
+
+def plot_sic_curve(
+    fpr: np.ndarray,
+    tpr: np.ndarray,
+    sic: np.ndarray,
+    title: str = "Significance Improvement Characteristic",
+) -> plt.Figure:
+    """Plot SIC curve (signal_eff / sqrt(bkg_eff))."""
+    fig, ax = plt.subplots()
+    # Plot SIC vs signal efficiency
+    ax.plot(tpr, sic)
+    ax.set_xlabel("Signal Efficiency (TPR)")
+    ax.set_ylabel("SIC = TPR / sqrt(FPR)")
+    ax.set_title(title)
+    max_idx = np.nanargmax(sic)
+    ax.axhline(
+        sic[max_idx],
+        color="red",
+        linestyle="--",
+        alpha=0.4,
+        label=f"Max SIC = {sic[max_idx]:.2f}",
+    )
+    ax.legend()
+    return fig
+
+
+def plot_roc_per_origin(
+    roc_per_origin: dict[str, float],
+    title: str = "ROC AUC per Signal Origin",
+) -> plt.Figure:
+    """Horizontal bar chart of ROC AUC per signal origin."""
+    origins = sorted(roc_per_origin.keys())
+    aucs = [roc_per_origin[o] for o in origins]
+
+    fig, ax = plt.subplots(figsize=(8, max(4, len(origins) * 0.3)))
+    y_pos = np.arange(len(origins))
+    ax.barh(y_pos, aucs)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(origins, fontsize=7)
+    ax.set_xlabel("ROC AUC")
+    ax.set_title(title)
+    ax.set_xlim(0, 1)
+    fig.tight_layout()
+    return fig
+
+
+def plot_per_feature_importance(
+    mean_errors: np.ndarray,
+    feature_names: list[str],
+    title: str = "Per-Feature Reconstruction Error (Importance)",
+) -> plt.Figure:
+    """Bar chart of mean per-feature reconstruction error."""
+    order = np.argsort(mean_errors)[::-1]
+    fig, ax = plt.subplots(figsize=(max(8, len(feature_names) * 0.4), 5))
+    ax.bar(np.arange(len(feature_names)), mean_errors[order])
+    ax.set_xticks(np.arange(len(feature_names)))
+    ax.set_xticklabels([feature_names[i] for i in order], rotation=90, fontsize=7)
+    ax.set_ylabel("Mean Squared Error")
+    ax.set_title(title)
+    fig.tight_layout()
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+def _plot_per_dim_histograms(
+    values: np.ndarray,
+    n_cols: int = 4,
+    title: str = "",
+    dim_prefix: str = "dim",
+) -> plt.Figure:
+    """Generic per-dimension histogram grid."""
+    n_dims = values.shape[1]
+    n_rows = (n_dims + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
+    axes_flat = axes.flatten() if n_dims > 1 else [axes]
+
+    for i, ax in enumerate(axes_flat[:n_dims]):
+        ax.hist(values[:, i], bins=50, alpha=0.7, density=True)
+        ax.set_title(f"{dim_prefix}[{i}]", fontsize=8)
+
+    for ax in axes_flat[n_dims:]:
+        ax.set_visible(False)
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    return fig
