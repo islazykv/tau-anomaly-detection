@@ -91,9 +91,9 @@ class TestElboScore:
 
 class TestComputeThreshold:
     def test_percentile(self) -> None:
-        scores = np.arange(100, dtype=np.float64)
+        scores = np.arange(101, dtype=np.float64)  # 0..100, so 95th percentile = 95
         threshold = compute_threshold(scores, strategy="percentile", percentile=95.0)
-        assert threshold == pytest.approx(95.0, abs=0.5)
+        assert threshold == pytest.approx(95.0, abs=0.1)
 
     def test_std_dev(self) -> None:
         rng = np.random.default_rng(42)
