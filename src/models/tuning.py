@@ -220,6 +220,9 @@ def run_tune(
     results = tuner.fit()
     best_result = results.get_best_result(metric="val_loss", mode="min")
     best_config = best_result.config
+    if best_config is None:
+        msg = "No completed trials — best_result.config is None"
+        raise RuntimeError(msg)
     best_metric = best_result.metrics["val_loss"]
 
     log.info("Best trial config: %s", best_config)
