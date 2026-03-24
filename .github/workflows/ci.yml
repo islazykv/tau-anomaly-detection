@@ -32,4 +32,6 @@ jobs:
         run: uv run mypy src/
 
       - name: Run Tests
+        env:
+          WANDB_MODE: disabled
         run: uv run pytest tests/ -v

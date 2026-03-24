@@ -8,7 +8,7 @@ from pathlib import Path
 import lightning as L
 import pyrootutils
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
-from lightning.pytorch.loggers import MLFlowLogger
+from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
 from src.models.ae import Autoencoder
@@ -48,7 +48,7 @@ def _build_trainer(
     cfg: DictConfig,
     model_name: str,
     models_dir: Path,
-    mlflow_logger: MLFlowLogger,
+    logger: WandbLogger | bool,
 ) -> L.Trainer:
     """Create a Lightning Trainer with callbacks and logger."""
     callbacks = [
@@ -71,7 +71,7 @@ def _build_trainer(
     return L.Trainer(
         max_epochs=cfg.model.n_epochs,
         callbacks=callbacks,
-        logger=mlflow_logger,
+        logger=logger,
         deterministic=True,
         precision="16-mixed" if cfg.model.amp else "32-true",
         enable_progress_bar=True,
@@ -85,7 +85,7 @@ def train(cfg: DictConfig) -> None:
         1. Resolve output paths
         2. Setup DataModule (background-only training)
         3. Instantiate model (AE or VAE)
-        4. Create Trainer with callbacks and MLflow logger
+        4. Create Trainer with callbacks and WandB logger
         5. Fit model
         6. Save checkpoint
     """
@@ -127,16 +127,20 @@ def train(cfg: DictConfig) -> None:
         sum(p.numel() for p in model.parameters()),
     )
 
-    # MLflow
-    mlflow_logger = MLFlowLogger(
-        experiment_name=cfg.experiment_name,
-        tracking_uri=cfg.pipeline.mlflow.tracking_uri,
-        log_model=False,
-    )
-    mlflow_logger.log_hyperparams(dict(OmegaConf.to_container(cfg.model, resolve=True)))  # type: ignore[arg-type]
+    # WandB logger
+    wandb_cfg = cfg.pipeline.wandb
+    if wandb_cfg.enabled:
+        wandb_logger: WandbLogger | bool = WandbLogger(
+            project=wandb_cfg.project,
+            name=f"{cfg.experiment_name}-{model_name}",
+            log_model=wandb_cfg.log_model,
+            config=dict(OmegaConf.to_container(cfg.model, resolve=True)),  # type: ignore[arg-type]
+        )
+    else:
+        wandb_logger = False
 
     # Trainer
-    trainer = _build_trainer(cfg, model_name, models_dir, mlflow_logger)
+    trainer = _build_trainer(cfg, model_name, models_dir, wandb_logger)
 
     # Fit
     trainer.fit(model, datamodule=dm)

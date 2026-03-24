@@ -66,7 +66,7 @@ format:
 # --------------------------------------------------------------------------- #
 
 ui:
-	uv run mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5000
+	@echo "WandB dashboard: https://wandb.ai — run 'wandb login' to authenticate"
 
 # --------------------------------------------------------------------------- #
 # Utilities

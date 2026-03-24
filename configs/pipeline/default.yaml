@@ -16,8 +16,8 @@ anomaly_score: "reconstruction_error"  # reconstruction_error, elbo (VAE only)
 threshold_strategy: "percentile"        # percentile, std_dev
 threshold_percentile: 95.0              # if percentile strategy
 
-# MLflow tracking
-mlflow:
+# Weights & Biases tracking
+wandb:
   enabled: true
-  tracking_uri: "sqlite:///mlruns.db"
-  log_artifacts: true
+  project: "tau-anomaly-detection"
+  log_model: false

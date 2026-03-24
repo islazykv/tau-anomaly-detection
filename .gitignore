@@ -31,8 +31,7 @@ data/
 *.hdf5
 
 # ML artifacts
-mlruns/
-mlflow.db
+wandb/
 *.ckpt
 lightning_logs/
 
