@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
+# Work around Ray >=2.44 bug where deprecated RunConfig.verbose="DEPRECATED"
+# causes AttributeError in tune/experimental/output.py (str has no .value).
+os.environ.setdefault("RAY_AIR_NEW_OUTPUT", "0")
+
 import lightning as L
+import pandas as pd
 import torch
 from lightning.pytorch.callbacks import EarlyStopping
 from omegaconf import DictConfig, OmegaConf
-from ray import train as ray_train, tune
-from ray.train import RunConfig
-from ray.tune import TuneConfig
+import ray
+from ray import tune
+from ray.tune import RunConfig, TuneConfig
 from ray.tune.schedulers import ASHAScheduler
 
 from src.models.ae import Autoencoder
@@ -118,7 +124,7 @@ class _TuneReportCallback(L.Callback):
     ) -> None:
         metrics = trainer.callback_metrics
         if "val_loss" in metrics:
-            ray_train.report({"val_loss": float(metrics["val_loss"])})
+            tune.report({"val_loss": float(metrics["val_loss"])})
 
 
 def _train_trial(
@@ -131,6 +137,12 @@ def _train_trial(
     Each trial recreates the DataModule from scratch to guarantee clean
     state and correct batch_size for this trial's config.
     """
+    import warnings
+
+    # Suppress noisy Lightning warnings inside Ray workers
+    warnings.filterwarnings("ignore", ".*does not have many workers.*")
+    logging.getLogger("lightning.pytorch").setLevel(logging.WARNING)
+
     model_name = base_cfg.model.name
     model_cfg = make_model_config(config, model_name, base_cfg)
 
@@ -159,6 +171,7 @@ def _train_trial(
         callbacks=callbacks,
         enable_progress_bar=False,
         enable_checkpointing=False,
+        enable_model_summary=False,
         logger=False,
         precision="16-mixed" if model_cfg.amp else "32-true",
     )
@@ -170,10 +183,19 @@ def _train_trial(
 # ------------------------------------------------------------------
 
 
+def _make_run_config(study_name: str) -> RunConfig:
+    """Build a RunConfig compatible with Ray >=2.44 deprecation changes.
+
+    Import ``RunConfig`` from ``ray.tune`` (not ``ray.train``) so that
+    deprecated fields get proper defaults instead of ``"DEPRECATED"`` strings.
+    """
+    return RunConfig(name=study_name, verbose=1)
+
+
 def run_tune(
     cfg: DictConfig,
     dm_kwargs: dict[str, Any],
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], pd.DataFrame]:
     """Run Ray Tune hyperparameter search with ASHA scheduler.
 
     Args:
@@ -182,8 +204,18 @@ def run_tune(
         dm_kwargs: Constructor kwargs for :class:`AnomalyDataModule`.
 
     Returns:
-        Best trial's config dict (raw search-space values).
+        Tuple of (best_config, trial_dataframe).
     """
+    # Ensure Ray workers can import project modules (src.*).
+    import pyrootutils
+
+    root = str(pyrootutils.find_root(indicator=[".git", "pyproject.toml"]))
+    runtime_env = {"env_vars": {"PYTHONPATH": root}}
+
+    if ray.is_initialized():
+        ray.shutdown()
+    ray.init(runtime_env=runtime_env, ignore_reinit_error=True)
+
     model_name = cfg.model.name
     tuning_cfg = cfg.tuning
 
@@ -214,7 +246,7 @@ def run_tune(
             mode="min",
             num_samples=tuning_cfg.num_samples,
         ),
-        run_config=RunConfig(name=tuning_cfg.study_name),
+        run_config=_make_run_config(tuning_cfg.study_name),
     )
 
     results = tuner.fit()
@@ -228,7 +260,8 @@ def run_tune(
     log.info("Best trial config: %s", best_config)
     log.info("Best val_loss: %.6f", best_metric)
 
-    return best_config
+    trial_df = results.get_dataframe()
+    return best_config, trial_df
 
 
 # ------------------------------------------------------------------

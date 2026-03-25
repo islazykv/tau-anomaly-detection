@@ -104,7 +104,7 @@ class AnomalyDataModule(L.LightningDataModule):
         )
         self.predict_origins = np.concatenate(
             [
-                bkg_df["eventOrigin"].iloc[X_val.index].to_numpy(),
+                bkg_df["eventOrigin"].loc[X_val.index].to_numpy(),
                 sig_df["eventOrigin"].to_numpy(),
             ]
         )

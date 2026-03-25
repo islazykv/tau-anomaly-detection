@@ -60,7 +60,7 @@ def tune(cfg: DictConfig) -> None:
         ray.init(ignore_reinit_error=True)
 
     try:
-        best_config = run_tune(cfg, dm_kwargs)
+        best_config, _trial_df = run_tune(cfg, dm_kwargs)
 
         # Convert to model-config format and persist
         best_model_config = export_best_config(best_config, model_name)
