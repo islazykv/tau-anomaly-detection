@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+import numpy as np
 import pyrootutils
 from omegaconf import DictConfig
 
@@ -85,6 +86,18 @@ def feature_engineer(cfg: DictConfig) -> None:
 
     df_mc["eventOrigin"] = event_origin
     df_mc["tau_n"] = tau_n
+
+    signal_patterns = tuple(cfg.samples.signal.filter_patterns)
+    df_mc["sample_type"] = np.where(
+        df_mc["eventOrigin"].str.startswith(signal_patterns),
+        "signal",
+        df_mc["eventOrigin"],
+    )
+    log.info(
+        "Assigned sample_type — background: %d, signal: %d",
+        (df_mc["sample_type"] != "signal").sum(),
+        (df_mc["sample_type"] == "signal").sum(),
+    )
 
     df_mc = validate_mc(df_mc)
 

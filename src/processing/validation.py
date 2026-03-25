@@ -9,7 +9,7 @@ import pandera.pandas as pa
 
 log = logging.getLogger(__name__)
 
-METADATA_COLUMNS = {"eventOrigin", "tau_n", "weight"}
+METADATA_COLUMNS = {"eventOrigin", "sample_type", "tau_n", "weight"}
 
 
 def _build_mc_schema(df: pd.DataFrame) -> pa.DataFrameSchema:
@@ -20,6 +20,7 @@ def _build_mc_schema(df: pd.DataFrame) -> pa.DataFrameSchema:
     """
     columns: dict[str, pa.Column] = {
         "eventOrigin": pa.Column(nullable=False),
+        "sample_type": pa.Column(nullable=False),
         "tau_n": pa.Column(nullable=False),
         "weight": pa.Column(float, nullable=False),
     }

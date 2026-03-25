@@ -65,7 +65,9 @@ def eda(cfg: DictConfig) -> None:
         for c in df_mc.select_dtypes(include="number").columns
         if c not in METADATA_COLUMNS
     ]
-    fig = plot_feature_distributions(df_mc, features=training_cols[:12])
+    fig = plot_feature_distributions(
+        df_mc, features=training_cols[:12], group_col="sample_type"
+    )
     save_figure(fig, plots_dir / "feature_distributions.png")
 
     log.info("EDA complete — plots saved to %s", plots_dir)

@@ -8,13 +8,34 @@ import seaborn as sns
 
 _NON_TRAINING_COLS = {"tau_n", "eventOrigin", "weight", "sample_type"}
 
+_DEFAULT_SAMPLE_ORDER = ["topquarks", "wtaunu", "ztautau", "diboson", "other", "signal"]
+
+
+def _sort_samples(
+    groups: list[str],
+    order: list[str] | None = None,
+) -> list[str]:
+    """Sort sample names using a custom order.
+
+    Samples present in *order* appear first (in that order); any remaining
+    samples are appended at the end in alphabetical order.
+    """
+    if order is None:
+        order = _DEFAULT_SAMPLE_ORDER
+    order_map = {name: i for i, name in enumerate(order)}
+    known = sorted((g for g in groups if g in order_map), key=lambda g: order_map[g])
+    unknown = sorted(g for g in groups if g not in order_map)
+    return known + unknown
+
 
 def plot_sample_balance(
     df: pd.DataFrame,
-    sample_col: str = "eventOrigin",
+    sample_col: str = "sample_type",
+    sample_order: list[str] | None = None,
 ) -> plt.Figure:
     """Plot unweighted and weighted event counts per sample type."""
-    counts = df[sample_col].value_counts().sort_index()
+    ordered = _sort_samples(df[sample_col].unique().tolist(), sample_order)
+    counts = df[sample_col].value_counts().reindex(ordered)
     n = len(counts)
 
     has_weights = "weight" in df.columns
@@ -33,7 +54,7 @@ def plot_sample_balance(
     ampl.draw_atlas_label(0.05, 0.97, ax=axes[0])
 
     if has_weights:
-        weighted = df.groupby(sample_col)["weight"].sum().sort_index()
+        weighted = df.groupby(sample_col)["weight"].sum().reindex(ordered)
         axes[1].bar(range(n), weighted.values, width=0.5)
         axes[1].set_xticks(range(n))
         axes[1].set_xticklabels(weighted.index, fontsize=10, rotation=45, ha="right")
@@ -87,11 +108,12 @@ def plot_feature_distributions(
     df: pd.DataFrame,
     features: list[str],
     group_col: str = "eventOrigin",
+    sample_order: list[str] | None = None,
     n_cols: int = 3,
     n_bins: int = 50,
 ) -> plt.Figure:
     """Plot per-sample normalized histograms for each feature in a grid layout."""
-    groups = sorted(df[group_col].unique())
+    groups = _sort_samples(df[group_col].unique().tolist(), sample_order)
     colors = [plt.cm.tab10(i % 10) for i in range(len(groups))]
     n = len(features)
     n_rows = max(1, (n + n_cols - 1) // n_cols)
