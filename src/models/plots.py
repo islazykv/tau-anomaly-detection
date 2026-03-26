@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+import atlas_mpl_style as ampl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -19,17 +20,30 @@ log = logging.getLogger(__name__)
 def plot_loss(
     train_loss: list[float],
     val_loss: list[float],
-    title: str = "Training Loss",
+    title: str = "Loss Plot",
+    loss_type: str = "MSE",
 ) -> plt.Figure:
-    """Plot train and validation loss curves."""
-    fig, ax = plt.subplots()
+    """Plot training and validation loss curves with the best epoch marked."""
     epochs = range(1, len(train_loss) + 1)
-    ax.plot(epochs, train_loss, label="Train")
-    ax.plot(epochs, val_loss, label="Validation")
+    best_epoch = int(np.argmin(val_loss)) + 1
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(epochs, train_loss, label="Training loss", linewidth=1.5, color="green")
+    ax.plot(epochs, val_loss, label="Validation loss", linewidth=1.5, color="red")
+    ax.axvline(
+        best_epoch,
+        color="blue",
+        linestyle="--",
+        linewidth=1.0,
+        label=f"Best epoch: {best_epoch}",
+    )
     ax.set_xlabel("Epoch")
-    ax.set_ylabel("Loss")
+    ax.set_ylabel(f"Loss ({loss_type})")
     ax.set_title(title)
     ax.legend()
+    ax.grid(True, alpha=0.3)
+    ampl.draw_atlas_label(0.02, 0.97, ax=ax)
+    fig.tight_layout()
     return fig
 
 
@@ -62,6 +76,7 @@ def plot_loss_components(
 
     fig.suptitle(title)
     fig.tight_layout()
+    ampl.draw_atlas_label(0.05, 0.97, ax=axes[0])
     return fig
 
 
@@ -85,6 +100,7 @@ def plot_reconstruction_error(
     ax.set_title(title)
     ax.legend()
     ax.set_yscale("log")
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     return fig
 
 
@@ -109,9 +125,11 @@ def plot_reconstruction_performance(
     ax.bar(x_pos + width / 2, x_reconstructed, width, label="Reconstructed", alpha=0.8)
     ax.set_xticks(x_pos)
     ax.set_xticklabels(feature_names, rotation=90, fontsize=7)
+    ax.set_xlim(-0.5, len(feature_names) - 0.5)
     ax.set_ylabel("Feature Value")
     ax.set_title(f"{title} (event {event_idx})")
     ax.legend()
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     fig.tight_layout()
     return fig
 
@@ -139,6 +157,7 @@ def plot_reconstruction_comparison(
 
     fig.suptitle(title)
     fig.tight_layout()
+    ampl.draw_atlas_label(0.05, 0.97, ax=axes[0])
     return fig
 
 
@@ -146,19 +165,24 @@ def plot_feature_histograms(
     x_original: np.ndarray,
     x_reconstructed: np.ndarray,
     feature_names: list[str],
-    n_cols: int = 4,
+    n_cols: int = 3,
     n_bins: int = 50,
     title: str = "Feature Distributions: Original vs Reconstructed",
 ) -> plt.Figure:
     """Per-feature histograms comparing original and reconstructed values."""
     n_features = len(feature_names)
     n_rows = (n_features + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(10 * n_cols, 8 * n_rows))
     axes_flat = axes.flatten() if n_features > 1 else [axes]
 
     for i, (ax, name) in enumerate(zip(axes_flat, feature_names)):
         ax.hist(
-            x_original[:, i], bins=n_bins, alpha=0.6, label="Original", density=True
+            x_original[:, i],
+            bins=n_bins,
+            alpha=0.6,
+            label="Original",
+            density=True,
+            histtype="stepfilled",
         )
         ax.hist(
             x_reconstructed[:, i],
@@ -166,15 +190,18 @@ def plot_feature_histograms(
             alpha=0.6,
             label="Reconstructed",
             density=True,
+            histtype="stepfilled",
         )
-        ax.set_title(name, fontsize=8)
-        ax.legend(fontsize=6)
+        ax.set_xlabel(name)
+        ax.set_ylabel("Density")
+        ax.legend()
 
     for ax in axes_flat[n_features:]:
         ax.set_visible(False)
 
-    fig.suptitle(title)
     fig.tight_layout()
+    fig.suptitle(title, y=1.01)
+    ampl.draw_atlas_label(0.05, 0.97, ax=axes_flat[0])
     return fig
 
 
@@ -211,6 +238,7 @@ def plot_latent_histograms(
 
     fig.suptitle(title)
     fig.tight_layout()
+    ampl.draw_atlas_label(0.05, 0.97, ax=axes_flat[0])
     return fig
 
 
@@ -236,6 +264,7 @@ def plot_latent_space_2d(
     ax.set_ylabel(f"{method} 2")
     ax.set_title(title or f"Latent Space ({method})")
     ax.legend(markerscale=5)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     return fig
 
 
@@ -279,6 +308,7 @@ def plot_latent_mean_spread(
     ax.set_ylabel("Var(mu)")
     ax.set_title(title)
     ax.legend()
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
 
     n_collapsed = (variances < 0.1).sum()
     if n_collapsed > 0:
@@ -314,6 +344,7 @@ def plot_logvar_spread(
     ax.set_ylabel("Mean(logvar)")
     ax.set_title(title)
     ax.legend()
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
 
     n_collapsed = (means < -5).sum()
     if n_collapsed > 0:
@@ -341,6 +372,7 @@ def plot_mu_vs_logvar(
     ax.set_title(title)
     ax.axhline(0, color="grey", linestyle=":", alpha=0.5)
     ax.axvline(0, color="grey", linestyle=":", alpha=0.5)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     return fig
 
 
@@ -354,6 +386,7 @@ def plot_kl_per_dimension(
     ax.set_xlabel("Latent Dimension")
     ax.set_ylabel("Mean KL Divergence")
     ax.set_title(title)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     return fig
 
 
@@ -379,6 +412,7 @@ def plot_sampled_latent_space(
     ax.set_ylabel("z[1]")
     ax.set_title(title)
     ax.legend(markerscale=5)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     return fig
 
 
@@ -401,6 +435,7 @@ def plot_roc_curve(
     ax.set_ylabel("Signal Efficiency (TPR)")
     ax.set_title(title)
     ax.legend()
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     return fig
 
 
@@ -426,6 +461,7 @@ def plot_sic_curve(
         label=f"Max SIC = {sic[max_idx]:.2f}",
     )
     ax.legend()
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     return fig
 
 
@@ -445,6 +481,7 @@ def plot_roc_per_origin(
     ax.set_xlabel("ROC AUC")
     ax.set_title(title)
     ax.set_xlim(0, 1)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     fig.tight_layout()
     return fig
 
@@ -462,6 +499,7 @@ def plot_per_feature_importance(
     ax.set_xticklabels([feature_names[i] for i in order], rotation=90, fontsize=7)
     ax.set_ylabel("Mean Squared Error")
     ax.set_title(title)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     fig.tight_layout()
     return fig
 
@@ -502,6 +540,7 @@ def plot_optimization_history(
     ax.set_title(title)
     ax.set_xticks(range(len(df)))
     ax.set_xticklabels(df["trial_id"], rotation=45, ha="right", fontsize=7)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     fig.tight_layout()
     return fig
 
@@ -531,6 +570,7 @@ def plot_hyperparameter_importance(
     ax.set_ylabel("|Spearman correlation| with val_loss")
     ax.set_title(title)
     ax.set_ylim(0, 1)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
     fig.tight_layout()
     return fig
 
@@ -566,6 +606,7 @@ def plot_parallel_coordinates(
     ax.set_xticklabels(hp_names, rotation=45, ha="right")
     ax.set_ylabel("Normalized value")
     ax.set_title(title)
+    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
 
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
@@ -598,6 +639,7 @@ def plot_hp_vs_objective(
 
     fig.suptitle(title)
     fig.tight_layout()
+    ampl.draw_atlas_label(0.05, 0.97, ax=axes_flat[0])
     return fig
 
 
@@ -627,4 +669,5 @@ def _plot_per_dim_histograms(
 
     fig.suptitle(title)
     fig.tight_layout()
+    ampl.draw_atlas_label(0.05, 0.97, ax=axes_flat[0])
     return fig

@@ -140,6 +140,6 @@ def plot_feature_distributions(
     for ax in axes_flat[n:]:
         ax.set_visible(False)
 
-    fig.suptitle("Feature distributions by sample")
     fig.tight_layout()
+    fig.suptitle("Feature distributions by sample", y=1.01)
     return fig

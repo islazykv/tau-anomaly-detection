@@ -12,6 +12,7 @@ from lightning.pytorch.loggers import WandbLogger
 from omegaconf import DictConfig, OmegaConf
 
 from src.models.ae import Autoencoder
+from src.models.callbacks import EpochProgressBar, MetricTracker
 from src.models.config import AEConfig, VAEConfig
 from src.models.datamodule import AnomalyDataModule
 from src.models.vae import VariationalAutoencoder
@@ -49,14 +50,15 @@ def _build_trainer(
     model_name: str,
     models_dir: Path,
     logger: WandbLogger | bool,
-) -> L.Trainer:
+) -> tuple[L.Trainer, MetricTracker]:
     """Create a Lightning Trainer with callbacks and logger."""
+    tracker = MetricTracker()
     callbacks = [
         EarlyStopping(
             monitor=cfg.pipeline.monitor_metric,
             mode=cfg.pipeline.monitor_mode,
             patience=cfg.pipeline.early_stopping_patience,
-            verbose=True,
+            verbose=False,
         ),
         ModelCheckpoint(
             dirpath=models_dir,
@@ -64,18 +66,21 @@ def _build_trainer(
             monitor=cfg.pipeline.monitor_metric,
             mode=cfg.pipeline.monitor_mode,
             save_top_k=1,
-            verbose=True,
+            verbose=False,
         ),
+        EpochProgressBar(),
+        tracker,
     ]
 
-    return L.Trainer(
+    trainer = L.Trainer(
         max_epochs=cfg.model.n_epochs,
         callbacks=callbacks,
         logger=logger,
         deterministic=True,
         precision="16-mixed" if cfg.model.amp else "32-true",
-        enable_progress_bar=True,
+        enable_progress_bar=False,
     )
+    return trainer, tracker
 
 
 def train(cfg: DictConfig) -> None:
@@ -140,15 +145,30 @@ def train(cfg: DictConfig) -> None:
         wandb_logger = False
 
     # Trainer
-    trainer = _build_trainer(cfg, model_name, models_dir, wandb_logger)
+    trainer, tracker = _build_trainer(cfg, model_name, models_dir, wandb_logger)
 
     # Fit
     trainer.fit(model, datamodule=dm)
 
     best_path = getattr(trainer.checkpoint_callback, "best_model_path", None)
+    if best_path:
+        best_path = Path(best_path).relative_to(root)
     log.info("Training complete — best checkpoint: %s", best_path)
 
     # Save final checkpoint with scaler state
     ckpt_path = models_dir / f"{model_name}.ckpt"
     trainer.save_checkpoint(ckpt_path)
-    log.info("Saved checkpoint: %s", ckpt_path)
+    log.info("Saved checkpoint: %s", ckpt_path.relative_to(root))
+
+    # Save loss plot
+    from src.models.plots import plot_loss
+
+    fig = plot_loss(
+        tracker.history["train_loss"],
+        tracker.history["val_loss"],
+        title=f"{model_name.upper()} Loss Plot",
+    )
+    fig.savefig(plots_dir / f"{model_name}_loss.png", dpi=150, bbox_inches="tight")
+    log.info(
+        "Saved loss plot: %s", (plots_dir / f"{model_name}_loss.png").relative_to(root)
+    )

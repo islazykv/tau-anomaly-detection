@@ -5,7 +5,7 @@ save_model: true
 val_fraction: 0.2
 
 # PyTorch Lightning early stopping (patience in epochs)
-early_stopping_patience: 20
+early_stopping_patience: 3
 
 # Checkpoint: metric to monitor for best model
 monitor_metric: "val_loss"

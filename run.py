@@ -56,7 +56,9 @@ def main(cfg: DictConfig) -> None:
 
         case "train":
             from src.pipelines.train import train
+            from src.utils import suppress_warnings
 
+            suppress_warnings()
             train(cfg)
 
         case "evaluate":
@@ -66,7 +68,9 @@ def main(cfg: DictConfig) -> None:
 
         case "tune":
             from src.pipelines.tune import tune
+            from src.utils import suppress_warnings
 
+            suppress_warnings()
             tune(cfg)
 
         case "serve":

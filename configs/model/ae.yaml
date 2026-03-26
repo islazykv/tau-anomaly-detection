@@ -2,7 +2,7 @@
 name: "ae"
 
 # Architecture
-hidden_sizes: [128, 64, 32]    # encoder layers (decoder mirrors)
+hidden_sizes: [512, 256]    # encoder layers (decoder mirrors)
 latent_dim: 16
 dropout: 0.1
 activation: "relu"              # relu, leaky_relu, elu, selu
@@ -14,7 +14,7 @@ loss: "mse"                     # mse, smooth_l1, bce (bce requires min_max norm
 normalization: "z_score"        # z_score, min_max
 
 # Training
-n_epochs: 200
+n_epochs: 5
 batch_size: 2048
 learning_rate: 1.0e-3
 weight_decay: 1.0e-5

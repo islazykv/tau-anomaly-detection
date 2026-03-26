@@ -2,7 +2,7 @@
 name: "vae"
 
 # Architecture
-hidden_sizes: [128, 64, 32]
+hidden_sizes: [512, 256]
 latent_dim: 16
 dropout: 0.1
 activation: "relu"
@@ -17,10 +17,10 @@ normalization: "z_score"
 # VAE-specific
 beta: 1.0                        # KL divergence weight
 beta_schedule: "constant"        # constant, warmup
-beta_warmup_epochs: 20           # epochs to linearly ramp beta (if warmup)
+beta_warmup_epochs: 5           # epochs to linearly ramp beta (if warmup)
 
 # Training
-n_epochs: 200
+n_epochs: 20
 batch_size: 2048
 learning_rate: 1.0e-3
 weight_decay: 1.0e-5
