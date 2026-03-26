@@ -467,6 +467,141 @@ def plot_per_feature_importance(
 
 
 # ---------------------------------------------------------------------------
+# Tuning analysis plots
+# ---------------------------------------------------------------------------
+
+_HP_DISPLAY_NAMES = {
+    "config/n_layers": "n_layers",
+    "config/layer_size": "layer_size",
+    "config/latent_dim": "latent_dim",
+    "config/dropout": "dropout",
+    "config/learning_rate": "learning_rate",
+    "config/weight_decay": "weight_decay",
+    "config/batch_size": "batch_size",
+    "config/beta": "beta",
+}
+
+
+def _get_hp_columns(trial_df: pd.DataFrame) -> list[str]:
+    """Return hyperparameter columns present in the trial DataFrame."""
+    return [c for c in _HP_DISPLAY_NAMES if c in trial_df.columns]
+
+
+def plot_optimization_history(
+    trial_df: pd.DataFrame,
+    title: str = "Optimization History",
+) -> plt.Figure:
+    """Bar chart of val_loss per trial, sorted by trial order."""
+    df = trial_df.sort_values("trial_id").reset_index(drop=True)
+    fig, ax = plt.subplots(figsize=(max(6, len(df) * 0.5), 5))
+
+    colors = ["C1" if v == df["val_loss"].min() else "C0" for v in df["val_loss"]]
+    ax.bar(range(len(df)), df["val_loss"], color=colors)
+    ax.set_xlabel("Trial")
+    ax.set_ylabel("val_loss")
+    ax.set_title(title)
+    ax.set_xticks(range(len(df)))
+    ax.set_xticklabels(df["trial_id"], rotation=45, ha="right", fontsize=7)
+    fig.tight_layout()
+    return fig
+
+
+def plot_hyperparameter_importance(
+    trial_df: pd.DataFrame,
+    title: str = "Hyperparameter Importance",
+) -> plt.Figure:
+    """Absolute Spearman correlation of each HP with val_loss."""
+    hp_cols = _get_hp_columns(trial_df)
+    correlations = {}
+    for col in hp_cols:
+        vals = pd.to_numeric(trial_df[col], errors="coerce")
+        if vals.nunique() > 1:
+            correlations[_HP_DISPLAY_NAMES[col]] = abs(
+                vals.corr(trial_df["val_loss"], method="spearman")
+            )
+
+    names = list(correlations.keys())
+    values = list(correlations.values())
+    order = np.argsort(values)[::-1]
+
+    fig, ax = plt.subplots(figsize=(max(6, len(names) * 0.6), 5))
+    ax.bar(range(len(names)), [values[i] for i in order])
+    ax.set_xticks(range(len(names)))
+    ax.set_xticklabels([names[i] for i in order], rotation=45, ha="right")
+    ax.set_ylabel("|Spearman correlation| with val_loss")
+    ax.set_title(title)
+    ax.set_ylim(0, 1)
+    fig.tight_layout()
+    return fig
+
+
+def plot_parallel_coordinates(
+    trial_df: pd.DataFrame,
+    title: str = "Parallel Coordinates",
+) -> plt.Figure:
+    """Parallel coordinates plot of HPs colored by val_loss."""
+    hp_cols = _get_hp_columns(trial_df)
+    df = trial_df[hp_cols + ["val_loss"]].copy()
+    df.columns = [_HP_DISPLAY_NAMES.get(c, c) for c in df.columns]
+
+    # Normalize each column to [0, 1] for display
+    hp_names = [_HP_DISPLAY_NAMES[c] for c in hp_cols]
+    df_norm = df.copy()
+    for col in hp_names:
+        vals = pd.to_numeric(df_norm[col], errors="coerce")
+        vmin, vmax = vals.min(), vals.max()
+        df_norm[col] = (vals - vmin) / (vmax - vmin) if vmax > vmin else 0.5
+
+    fig, ax = plt.subplots(figsize=(max(8, len(hp_names) * 1.2), 5))
+    cmap = plt.cm.viridis_r
+    vmin, vmax = df["val_loss"].min(), df["val_loss"].max()
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+
+    for _, row in df_norm.iterrows():
+        vals = [float(row[c]) for c in hp_names]
+        color = cmap(norm(row["val_loss"]))
+        ax.plot(range(len(hp_names)), vals, alpha=0.6, color=color, linewidth=1.5)
+
+    ax.set_xticks(range(len(hp_names)))
+    ax.set_xticklabels(hp_names, rotation=45, ha="right")
+    ax.set_ylabel("Normalized value")
+    ax.set_title(title)
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    fig.colorbar(sm, ax=ax, label="val_loss")
+    fig.tight_layout()
+    return fig
+
+
+def plot_hp_vs_objective(
+    trial_df: pd.DataFrame,
+    n_cols: int = 3,
+    title: str = "Hyperparameters vs val_loss",
+) -> plt.Figure:
+    """Scatter plot of each HP vs val_loss."""
+    hp_cols = _get_hp_columns(trial_df)
+    n = len(hp_cols)
+    n_rows = max(1, (n + n_cols - 1) // n_cols)
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows))
+    axes_flat = np.array(axes).reshape(-1)
+
+    for ax, col in zip(axes_flat, hp_cols):
+        vals = pd.to_numeric(trial_df[col], errors="coerce")
+        ax.scatter(vals, trial_df["val_loss"], alpha=0.7, edgecolors="k", linewidth=0.3)
+        ax.set_xlabel(_HP_DISPLAY_NAMES[col])
+        ax.set_ylabel("val_loss")
+
+    for ax in axes_flat[n:]:
+        ax.set_visible(False)
+
+    fig.suptitle(title)
+    fig.tight_layout()
+    return fig
+
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 

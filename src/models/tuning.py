@@ -183,13 +183,13 @@ def _train_trial(
 # ------------------------------------------------------------------
 
 
-def _make_run_config(study_name: str) -> RunConfig:
+def _make_run_config(study_name: str, storage_path: str | None = None) -> RunConfig:
     """Build a RunConfig compatible with Ray >=2.44 deprecation changes.
 
     Import ``RunConfig`` from ``ray.tune`` (not ``ray.train``) so that
     deprecated fields get proper defaults instead of ``"DEPRECATED"`` strings.
     """
-    return RunConfig(name=study_name, verbose=1)
+    return RunConfig(name=study_name, verbose=1, storage_path=storage_path)
 
 
 def run_tune(
@@ -246,7 +246,10 @@ def run_tune(
             mode="min",
             num_samples=tuning_cfg.num_samples,
         ),
-        run_config=_make_run_config(tuning_cfg.study_name),
+        run_config=_make_run_config(
+            tuning_cfg.study_name,
+            storage_path=os.path.join(root, "data", "ray_results"),
+        ),
     )
 
     results = tuner.fit()
