@@ -28,6 +28,9 @@ class EpochProgressBar(L.Callback):
         for key in ("train_loss", "val_loss"):
             if key in metrics:
                 postfix[key] = f"{float(metrics[key]):.5f}"
+        for key in ("val_mu_var", "val_logvar_mean"):
+            if key in metrics:
+                postfix[key] = f"{float(metrics[key]):.3f}"
         self._bar.set_postfix(postfix)
         self._bar.update(1)
 

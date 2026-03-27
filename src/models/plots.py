@@ -42,7 +42,7 @@ def plot_loss(
     ax.set_title(title)
     ax.legend()
     ax.grid(True, alpha=0.3)
-    ampl.draw_atlas_label(0.02, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.02, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig
 
@@ -54,29 +54,37 @@ def plot_loss_components(
     title: str = "VAE Loss Components",
 ) -> plt.Figure:
     """Plot VAE reconstruction and KL loss components."""
-    epochs = range(1, len(recon_loss) + 1)
+    n_epochs = len(recon_loss)
+    epochs = range(1, n_epochs + 1)
     n_panels = 3 if beta_values is not None else 2
-    fig, axes = plt.subplots(1, n_panels, figsize=(5 * n_panels, 4))
+    fig, axes = plt.subplots(1, n_panels, figsize=(6 * n_panels, 5))
 
     axes[0].plot(epochs, recon_loss)
     axes[0].set_xlabel("Epoch")
     axes[0].set_ylabel("Reconstruction Loss")
     axes[0].set_title("Reconstruction")
+    axes[0].set_xlim(0, n_epochs + 1)
+    axes[0].grid(True, alpha=0.3)
 
     axes[1].plot(epochs, kl_loss)
     axes[1].set_xlabel("Epoch")
     axes[1].set_ylabel("KL Divergence")
     axes[1].set_title("KL")
+    axes[1].set_xlim(0, n_epochs + 1)
+    axes[1].grid(True, alpha=0.3)
 
     if beta_values is not None:
         axes[2].plot(epochs, beta_values)
         axes[2].set_xlabel("Epoch")
         axes[2].set_ylabel("Beta")
         axes[2].set_title("Beta Schedule")
+        axes[2].set_xlim(0, n_epochs + 1)
+        axes[2].grid(True, alpha=0.3)
 
     fig.suptitle(title)
     fig.tight_layout()
-    ampl.draw_atlas_label(0.05, 0.97, ax=axes[0])
+    fig.subplots_adjust(top=0.84)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes[0])
     return fig
 
 
@@ -100,7 +108,7 @@ def plot_reconstruction_error(
     ax.set_title(title)
     ax.legend()
     ax.set_yscale("log")
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     return fig
 
 
@@ -129,7 +137,7 @@ def plot_reconstruction_performance(
     ax.set_ylabel("Feature Value")
     ax.set_title(f"{title} (event {event_idx})")
     ax.legend()
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig
 
@@ -157,7 +165,7 @@ def plot_reconstruction_comparison(
 
     fig.suptitle(title)
     fig.tight_layout()
-    ampl.draw_atlas_label(0.05, 0.97, ax=axes[0])
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes[0])
     return fig
 
 
@@ -201,7 +209,7 @@ def plot_feature_histograms(
 
     fig.tight_layout()
     fig.suptitle(title, y=1.01)
-    ampl.draw_atlas_label(0.05, 0.97, ax=axes_flat[0])
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes_flat[0])
     return fig
 
 
@@ -238,7 +246,7 @@ def plot_latent_histograms(
 
     fig.suptitle(title)
     fig.tight_layout()
-    ampl.draw_atlas_label(0.05, 0.97, ax=axes_flat[0])
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes_flat[0])
     return fig
 
 
@@ -264,7 +272,7 @@ def plot_latent_space_2d(
     ax.set_ylabel(f"{method} 2")
     ax.set_title(title or f"Latent Space ({method})")
     ax.legend(markerscale=5)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     return fig
 
 
@@ -308,7 +316,7 @@ def plot_latent_mean_spread(
     ax.set_ylabel("Var(mu)")
     ax.set_title(title)
     ax.legend()
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
 
     n_collapsed = (variances < 0.1).sum()
     if n_collapsed > 0:
@@ -337,19 +345,19 @@ def plot_logvar_spread(
     means = logvar.mean(axis=0)
     fig, ax = plt.subplots()
     dims = np.arange(len(means))
-    colors = ["red" if m < -5 else "C0" for m in means]
+    colors = ["red" if m < -8 else "C0" for m in means]
     ax.bar(dims, means, color=colors)
-    ax.axhline(-5, color="red", linestyle="--", alpha=0.5, label="Collapse threshold")
+    ax.axhline(-8, color="red", linestyle="--", alpha=0.5, label="Collapse threshold")
     ax.set_xlabel("Latent Dimension")
     ax.set_ylabel("Mean(logvar)")
     ax.set_title(title)
     ax.legend()
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
 
-    n_collapsed = (means < -5).sum()
+    n_collapsed = (means < -8).sum()
     if n_collapsed > 0:
         log.warning(
-            "%d latent dimensions with logvar < -5 (potential collapse)", n_collapsed
+            "%d latent dimensions with logvar < -8 (potential collapse)", n_collapsed
         )
     return fig
 
@@ -372,7 +380,7 @@ def plot_mu_vs_logvar(
     ax.set_title(title)
     ax.axhline(0, color="grey", linestyle=":", alpha=0.5)
     ax.axvline(0, color="grey", linestyle=":", alpha=0.5)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     return fig
 
 
@@ -386,7 +394,7 @@ def plot_kl_per_dimension(
     ax.set_xlabel("Latent Dimension")
     ax.set_ylabel("Mean KL Divergence")
     ax.set_title(title)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     return fig
 
 
@@ -412,7 +420,7 @@ def plot_sampled_latent_space(
     ax.set_ylabel("z[1]")
     ax.set_title(title)
     ax.legend(markerscale=5)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     return fig
 
 
@@ -435,7 +443,7 @@ def plot_roc_curve(
     ax.set_ylabel("Signal Efficiency (TPR)")
     ax.set_title(title)
     ax.legend()
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     return fig
 
 
@@ -461,7 +469,7 @@ def plot_sic_curve(
         label=f"Max SIC = {sic[max_idx]:.2f}",
     )
     ax.legend()
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     return fig
 
 
@@ -481,7 +489,7 @@ def plot_roc_per_origin(
     ax.set_xlabel("ROC AUC")
     ax.set_title(title)
     ax.set_xlim(0, 1)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig
 
@@ -499,7 +507,7 @@ def plot_per_feature_importance(
     ax.set_xticklabels([feature_names[i] for i in order], rotation=90, fontsize=7)
     ax.set_ylabel("Mean Squared Error")
     ax.set_title(title)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig
 
@@ -540,7 +548,7 @@ def plot_optimization_history(
     ax.set_title(title)
     ax.set_xticks(range(len(df)))
     ax.set_xticklabels(df["trial_id"], rotation=45, ha="right", fontsize=7)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig
 
@@ -570,7 +578,7 @@ def plot_hyperparameter_importance(
     ax.set_ylabel("|Spearman correlation| with val_loss")
     ax.set_title(title)
     ax.set_ylim(0, 1)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig
 
@@ -606,7 +614,7 @@ def plot_parallel_coordinates(
     ax.set_xticklabels(hp_names, rotation=45, ha="right")
     ax.set_ylabel("Normalized value")
     ax.set_title(title)
-    ampl.draw_atlas_label(0.05, 0.97, ax=ax)
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
 
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
@@ -639,7 +647,7 @@ def plot_hp_vs_objective(
 
     fig.suptitle(title)
     fig.tight_layout()
-    ampl.draw_atlas_label(0.05, 0.97, ax=axes_flat[0])
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes_flat[0])
     return fig
 
 
@@ -669,5 +677,5 @@ def _plot_per_dim_histograms(
 
     fig.suptitle(title)
     fig.tight_layout()
-    ampl.draw_atlas_label(0.05, 0.97, ax=axes_flat[0])
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes_flat[0])
     return fig
