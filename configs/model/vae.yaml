@@ -15,12 +15,12 @@ reconstruction_loss: "mse"      # mse, smooth_l1, bce
 normalization: "z_score"
 
 # VAE-specific
-beta: 1.0                        # KL divergence weight
+beta: 4.0e-4                        # KL divergence weight
 beta_schedule: "constant"        # constant, warmup
 beta_warmup_epochs: 5           # epochs to linearly ramp beta (if warmup)
 
 # Training
-n_epochs: 20
+n_epochs: 10
 batch_size: 2048
 learning_rate: 1.0e-3
 weight_decay: 1.0e-5

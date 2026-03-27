@@ -182,15 +182,23 @@ class VariationalAutoencoder(L.LightningModule):
         self.log(f"{prefix}_mu_var", mu.var(), on_step=False, on_epoch=True)
         self.log(f"{prefix}_logvar_mean", logvar.mean(), on_step=False, on_epoch=True)
 
-        # Collapse warnings (logged, not raised)
-        if mu.var().item() < 0.1:
+        # Track collapse indicators (warnings deferred to on_train_end)
+        self._last_mu_var = mu.var().item()
+        self._last_logvar_mean = logvar.mean().item()
+
+    def on_train_end(self) -> None:
+        """Log collapse warnings once at end of training."""
+        mu_var = getattr(self, "_last_mu_var", None)
+        logvar_mean = getattr(self, "_last_logvar_mean", None)
+        if mu_var is not None and mu_var < 0.1:
             log.warning(
-                "Potential posterior collapse: mu.var() = %.4f", mu.var().item()
+                "Posterior collapse detected: final mu.var() = %.4f (threshold: 0.1)",
+                mu_var,
             )
-        if logvar.mean().item() < -5.0:
+        if logvar_mean is not None and logvar_mean < -8.0:
             log.warning(
-                "Potential posterior collapse: logvar.mean() = %.4f",
-                logvar.mean().item(),
+                "Posterior collapse detected: final logvar.mean() = %.4f (threshold: -8.0)",
+                logvar_mean,
             )
 
     # ------------------------------------------------------------------
