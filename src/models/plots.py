@@ -326,6 +326,25 @@ def plot_latent_mean_spread(
     return fig
 
 
+def plot_latent_mean_boxplot(
+    mu: np.ndarray,
+    title: str = "Latent Mean Distribution per Dimension",
+) -> plt.Figure:
+    """Boxplot of mu per latent dimension. Shows full distribution relative to prior mean=0."""
+    n_dims = mu.shape[1]
+    fig, ax = plt.subplots(figsize=(max(8, n_dims * 0.8), 5))
+    ax.boxplot(mu, patch_artist=True, medianprops={"color": "C1"})
+    ax.axhline(0, color="grey", linestyle=":", alpha=0.5, label="Prior mean = 0")
+    ax.set_xlabel("Latent Dimension")
+    ax.set_ylabel("mu")
+    ax.set_title(title)
+    ax.set_xticks(range(1, n_dims + 1))
+    ax.set_xticklabels([str(i) for i in range(n_dims)])
+    ax.legend()
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
+    return fig
+
+
 def plot_logvar_histograms(
     logvar: np.ndarray,
     n_cols: int = 4,
@@ -359,6 +378,25 @@ def plot_logvar_spread(
         log.warning(
             "%d latent dimensions with logvar < -8 (potential collapse)", n_collapsed
         )
+    return fig
+
+
+def plot_logvar_boxplot(
+    logvar: np.ndarray,
+    title: str = "Log-Variance Distribution per Dimension",
+) -> plt.Figure:
+    """Boxplot of logvar per latent dimension. Shows full distribution relative to prior logvar=0."""
+    n_dims = logvar.shape[1]
+    fig, ax = plt.subplots(figsize=(max(8, n_dims * 0.8), 5))
+    ax.boxplot(logvar, patch_artist=True, medianprops={"color": "C1"})
+    ax.axhline(0, color="grey", linestyle=":", alpha=0.5, label="Prior logvar = 0")
+    ax.set_xlabel("Latent Dimension")
+    ax.set_ylabel("logvar")
+    ax.set_title(title)
+    ax.set_xticks(range(1, n_dims + 1))
+    ax.set_xticklabels([str(i) for i in range(n_dims)])
+    ax.legend()
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     return fig
 
 
