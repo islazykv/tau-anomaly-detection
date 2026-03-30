@@ -90,6 +90,7 @@ class ModelRegistry:
         n_features = scaler.n_features
 
         # Model
+        model: Autoencoder | VariationalAutoencoder
         if model_name == "ae":
             cfg = AEConfig(**model_cfg)
             model = Autoencoder.load_from_checkpoint(
