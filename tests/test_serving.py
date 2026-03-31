@@ -11,7 +11,7 @@ from src.models.config import AEConfig, VAEConfig
 from src.models.vae import VariationalAutoencoder
 from src.serving.app import app
 from src.serving.registry import ModelRegistry, _ScalerState
-from src.serving.schemas import PredictionRequest
+from src.serving.schemas import PredictRequest
 
 
 # ------------------------------------------------------------------
@@ -66,12 +66,12 @@ def vae_registry(
 
 class TestSchemas:
     def test_prediction_request_valid(self) -> None:
-        req = PredictionRequest(features=[[1.0, 2.0, 3.0]])
+        req = PredictRequest(features=[[1.0, 2.0, 3.0]])
         assert len(req.features) == 1
 
     def test_prediction_request_empty_rejects(self) -> None:
         with pytest.raises(Exception):  # noqa: B017, PT011
-            PredictionRequest(features=[])
+            PredictRequest(features=[])
 
 
 # ------------------------------------------------------------------

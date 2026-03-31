@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class PredictionRequest(BaseModel):
+class PredictRequest(BaseModel):
     """Request body containing a batch of events for scoring."""
 
     features: list[list[float]] = Field(
@@ -24,7 +24,7 @@ class EventScore(BaseModel):
     per_feature_error: list[float]
 
 
-class PredictionResponse(BaseModel):
+class PredictResponse(BaseModel):
     """Response body containing per-event anomaly scores."""
 
     model_name: str

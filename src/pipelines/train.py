@@ -16,16 +16,9 @@ from src.models.callbacks import EpochProgressBar, MetricTracker
 from src.models.config import AEConfig, VAEConfig
 from src.models.datamodule import AnomalyDataModule
 from src.models.vae import VariationalAutoencoder
-from src.processing.analysis import get_output_paths
+from src.processing.analysis import get_background_origins, get_output_paths
 
 log = logging.getLogger(__name__)
-
-
-def _get_background_origins(cfg: DictConfig) -> set[str]:
-    """Return the set of background sample IDs after applying exclusions."""
-    bg_cfg = cfg.samples.background
-    excludes = set(bg_cfg.get("exclude", []))
-    return {s["id"] for s in bg_cfg.samples if s["id"] not in excludes}
 
 
 def _build_model(
@@ -105,7 +98,7 @@ def train(cfg: DictConfig) -> None:
 
     # DataModule
     mc_path = dataframes_dir / "mc.parquet"
-    background_origins = _get_background_origins(cfg)
+    background_origins = get_background_origins(cfg)
     log.info("Background origins: %s", background_origins)
 
     dm = AnomalyDataModule(

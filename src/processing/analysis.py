@@ -81,6 +81,13 @@ def resolve_samples(cfg: DictConfig) -> dict[str, list[Sample]]:
     return result
 
 
+def get_background_origins(cfg: DictConfig) -> set[str]:
+    """Return the set of background sample IDs after applying exclusions."""
+    bg_cfg = cfg.samples.background
+    excludes = set(bg_cfg.get("exclude", []))
+    return {s["id"] for s in bg_cfg.samples if s["id"] not in excludes}
+
+
 def get_output_paths(cfg: DictConfig) -> dict[str, Path]:
     """Compute output directory paths from analysis config."""
     analysis = cfg.analysis

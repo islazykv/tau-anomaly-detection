@@ -16,8 +16,8 @@ from src.serving.registry import ModelRegistry
 from src.serving.schemas import (
     EventScore,
     HealthResponse,
-    PredictionRequest,
-    PredictionResponse,
+    PredictRequest,
+    PredictResponse,
 )
 
 log = logging.getLogger(__name__)
@@ -67,8 +67,8 @@ async def health() -> HealthResponse:
     )
 
 
-@app.post("/predict", response_model=PredictionResponse)
-async def predict(request: PredictionRequest) -> PredictionResponse:
+@app.post("/predict", response_model=PredictResponse)
+async def predict(request: PredictRequest) -> PredictResponse:
     """Compute anomaly scores for a batch of events and flag anomalies."""
     reg = _get_registry()
 
@@ -90,7 +90,7 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
         for i in range(len(scores))
     ]
 
-    return PredictionResponse(
+    return PredictResponse(
         model_name=reg.model_name,
         threshold=reg.threshold,
         events=events,

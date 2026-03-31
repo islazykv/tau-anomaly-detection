@@ -16,17 +16,10 @@ from src.models.plots import (
     plot_parallel_coordinates,
 )
 from src.models.tuning import export_best_config, run_tune
-from src.processing.analysis import get_output_paths
+from src.processing.analysis import get_background_origins, get_output_paths
 from src.visualization.plots import save_figure
 
 log = logging.getLogger(__name__)
-
-
-def _get_background_origins(cfg: DictConfig) -> set[str]:
-    """Return the set of background sample IDs after applying exclusions."""
-    bg_cfg = cfg.samples.background
-    excludes = set(bg_cfg.get("exclude", []))
-    return {s["id"] for s in bg_cfg.samples if s["id"] not in excludes}
 
 
 def tune(cfg: DictConfig) -> None:
@@ -42,7 +35,7 @@ def tune(cfg: DictConfig) -> None:
 
     # DataModule constructor kwargs (serializable for Ray object store)
     mc_path = dataframes_dir / "mc.parquet"
-    background_origins = _get_background_origins(cfg)
+    background_origins = get_background_origins(cfg)
     log.info("Background origins: %s", background_origins)
 
     dm_kwargs: dict[str, object] = {
