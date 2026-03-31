@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 
 def suppress_warnings():
-    """Suppress unessential Python warnings, Lightning tips, and WandB noise."""
+    """Suppress Python warnings, Lightning tips, and WandB noise."""
     warnings.filterwarnings("ignore")
 
     # Suppress Lightning info-level messages (GPU/TPU available, litlogger tip, …)

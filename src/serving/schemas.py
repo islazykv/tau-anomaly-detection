@@ -1,4 +1,4 @@
-"""Pydantic schemas for the anomaly detection serving API."""
+"""Pydantic schemas for the serving API."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class PredictionRequest(BaseModel):
-    """Request body for anomaly score prediction."""
+    """Request body containing a batch of events for scoring."""
 
     features: list[list[float]] = Field(
         ...,
@@ -17,7 +17,7 @@ class PredictionRequest(BaseModel):
 
 
 class EventScore(BaseModel):
-    """Anomaly score for a single event."""
+    """Anomaly score and flag for a single event."""
 
     anomaly_score: float
     flagged: bool
@@ -25,7 +25,7 @@ class EventScore(BaseModel):
 
 
 class PredictionResponse(BaseModel):
-    """Response body with per-event anomaly scores."""
+    """Response body containing per-event anomaly scores."""
 
     model_name: str
     threshold: float
@@ -33,7 +33,7 @@ class PredictionResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Response body for the health check endpoint."""
+    """Response body for the health-check endpoint."""
 
     status: str = "ok"
     model_name: str

@@ -13,17 +13,7 @@ log = logging.getLogger(__name__)
 
 
 def prepare_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
-    """Extract training features and per-event weights from the MC DataFrame.
-
-    Unlike the supervised predecessor, no class labels are returned — the
-    autoencoder trains on features only.
-
-    Args:
-        df: MC DataFrame with metadata and feature columns.
-
-    Returns:
-        Tuple of (features, weights).
-    """
+    """Extract training features and per-event weights from the MC DataFrame."""
     feature_cols = [c for c in df.columns if c not in METADATA_COLUMNS]
     features = df[feature_cols].copy()
     weights = df["weight"].copy()
@@ -34,16 +24,7 @@ def split_background_signal(
     df: pd.DataFrame,
     background_origins: set[str],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Separate background from signal events using eventOrigin.
-
-    Args:
-        df: MC DataFrame containing both background and signal events.
-        background_origins: Set of ``eventOrigin`` values that identify
-            background samples.
-
-    Returns:
-        Tuple of (background_df, signal_df).
-    """
+    """Separate background from signal events using eventOrigin."""
     is_background = df["eventOrigin"].isin(background_origins)
     bkg_df = df.loc[is_background].copy()
     sig_df = df.loc[~is_background].copy()
@@ -61,20 +42,7 @@ def train_val_split(
     val_fraction: float = 0.2,
     seed: int = 1,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    """Random train/val split on background-only data.
-
-    No stratification is needed because the training set contains only
-    background events.
-
-    Args:
-        features: Background-only input features.
-        weights: Per-event sample weights (aligned with *features*).
-        val_fraction: Fraction of events reserved for validation.
-        seed: Random seed for reproducibility.
-
-    Returns:
-        Tuple of (X_train, X_val, w_train, w_val).
-    """
+    """Random train/val split on background-only data."""
     X_train, X_val, w_train, w_val = _sklearn_split(
         features,
         weights,

@@ -13,15 +13,7 @@ log = logging.getLogger(__name__)
 
 
 def compute_roc_auc(labels: np.ndarray, scores: np.ndarray) -> float:
-    """Compute ROC AUC for anomaly detection (bkg=0, sig=1).
-
-    Args:
-        labels: Binary labels (0 = background, 1 = signal).
-        scores: Per-event anomaly scores (higher = more anomalous).
-
-    Returns:
-        ROC AUC score.
-    """
+    """Compute ROC AUC for anomaly detection (bkg=0, sig=1)."""
     auc = roc_auc_score(labels, scores)
     log.info("ROC AUC: %.4f", auc)
     return float(auc)
@@ -31,15 +23,7 @@ def compute_roc_curve(
     labels: np.ndarray,
     scores: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Compute ROC curve arrays.
-
-    Args:
-        labels: Binary labels (0 = background, 1 = signal).
-        scores: Per-event anomaly scores.
-
-    Returns:
-        Tuple of (fpr, tpr, thresholds).
-    """
+    """Compute ROC curve arrays returning (fpr, tpr, thresholds)."""
     return roc_curve(labels, scores)
 
 
@@ -48,37 +32,14 @@ def compute_sic_curve(
     tpr: np.ndarray,
     epsilon: float = 1e-10,
 ) -> np.ndarray:
-    """Compute the Significance Improvement Characteristic (SIC) curve.
-
-    SIC = signal_efficiency / sqrt(background_efficiency)
-        = tpr / sqrt(fpr)
-
-    Args:
-        fpr: False positive rate (background efficiency).
-        tpr: True positive rate (signal efficiency).
-        epsilon: Small value to avoid division by zero.
-
-    Returns:
-        SIC values, same length as fpr/tpr.
-    """
+    """Compute the SIC curve as tpr / sqrt(fpr)."""
     return tpr / np.sqrt(np.maximum(fpr, epsilon))
 
 
 def compute_roc_per_origin(
     scores_df: pd.DataFrame,
 ) -> dict[str, float]:
-    """Compute ROC AUC per signal eventOrigin (e.g. per mass point).
-
-    Background events are always label 0; each unique signal origin is
-    evaluated separately against the full background.
-
-    Args:
-        scores_df: DataFrame with columns
-            ``anomaly_score``, ``sample_type``, ``eventOrigin``.
-
-    Returns:
-        Dict mapping signal eventOrigin to its ROC AUC.
-    """
+    """Compute ROC AUC per signal eventOrigin against the full background."""
     bkg = scores_df[scores_df["sample_type"] == "background"]
     sig = scores_df[scores_df["sample_type"] == "signal"]
 
@@ -101,16 +62,7 @@ def compute_metrics(
     scores: np.ndarray,
     scores_df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
-    """Compute all evaluation metrics.
-
-    Args:
-        labels: Binary labels (0 = background, 1 = signal).
-        scores: Per-event anomaly scores.
-        scores_df: Optional scores DataFrame for per-origin metrics.
-
-    Returns:
-        Dict with ``roc_auc``, ``max_sic``, and optionally ``roc_per_origin``.
-    """
+    """Compute all evaluation metrics (ROC AUC, max SIC, optional per-origin ROC)."""
     fpr, tpr, _ = compute_roc_curve(labels, scores)
     sic = compute_sic_curve(fpr, tpr)
 

@@ -1,4 +1,4 @@
-"""FastAPI application for anomaly detection inference."""
+"""FastAPI application for anomaly-detection inference."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def _get_registry() -> ModelRegistry:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
-    """Load model on startup; nothing special on shutdown."""
+    """Manage model lifecycle on startup and shutdown."""
     yield
 
 
@@ -57,7 +57,7 @@ app = FastAPI(
 
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    """Check server health and report loaded model info."""
+    """Return server health status and loaded model metadata."""
     reg = _get_registry()
     return HealthResponse(
         model_name=reg.model_name,
@@ -69,7 +69,7 @@ async def health() -> HealthResponse:
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(request: PredictionRequest) -> PredictionResponse:
-    """Compute anomaly scores for a batch of events."""
+    """Compute anomaly scores for a batch of events and flag anomalies."""
     reg = _get_registry()
 
     features = np.asarray(request.features, dtype=np.float32)
@@ -103,10 +103,7 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
 
 
 def run_server(cfg: DictConfig) -> None:
-    """Load model from checkpoint and start the uvicorn server.
-
-    Called by ``run.py stage=serve model=ae|vae``.
-    """
+    """Load model from checkpoint and start the uvicorn server."""
     global _registry  # noqa: PLW0603
 
     from src.processing.analysis import get_output_paths

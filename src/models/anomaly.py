@@ -12,33 +12,12 @@ log = logging.getLogger(__name__)
 
 
 def reconstruction_error(x: Tensor, x_hat: Tensor) -> Tensor:
-    """Per-event mean squared error across features.
-
-    Higher values indicate more anomalous events.
-
-    Args:
-        x: Original input features, shape ``(batch, features)``.
-        x_hat: Reconstructed features, shape ``(batch, features)``.
-
-    Returns:
-        Per-event reconstruction error, shape ``(batch,)``.
-    """
+    """Compute per-event mean squared error across features as the anomaly score."""
     return (x - x_hat).pow(2).mean(dim=1)
 
 
 def per_feature_error(x: Tensor, x_hat: Tensor) -> Tensor:
-    """Per-event, per-feature squared error.
-
-    Useful for interpretability — identifies which features contribute
-    most to the anomaly score (replaces SHAP).
-
-    Args:
-        x: Original input features, shape ``(batch, features)``.
-        x_hat: Reconstructed features, shape ``(batch, features)``.
-
-    Returns:
-        Per-event, per-feature error, shape ``(batch, features)``.
-    """
+    """Compute per-event, per-feature squared error for interpretability."""
     return (x - x_hat).pow(2)
 
 
@@ -49,18 +28,7 @@ def elbo_score(
     logvar: Tensor,
     beta: float = 1.0,
 ) -> Tensor:
-    """Per-event negative ELBO as anomaly score (VAE only).
-
-    Args:
-        x: Original input features, shape ``(batch, features)``.
-        x_hat: Reconstructed features, shape ``(batch, features)``.
-        mu: Latent mean, shape ``(batch, latent_dim)``.
-        logvar: Latent log-variance, shape ``(batch, latent_dim)``.
-        beta: KL weight.
-
-    Returns:
-        Per-event negative ELBO, shape ``(batch,)``.
-    """
+    """Compute per-event negative ELBO as an alternative anomaly score (VAE only)."""
     recon = (x - x_hat).pow(2).mean(dim=1)
     kl = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp()).sum(dim=1)
     return recon + beta * kl
@@ -74,14 +42,9 @@ def compute_threshold(
 ) -> float:
     """Compute anomaly threshold from background scores.
 
-    Args:
-        scores: Anomaly scores from background events.
-        strategy: ``"percentile"`` or ``"std_dev"``.
-        percentile: Percentile value (used if strategy is ``"percentile"``).
-        n_std: Number of standard deviations above mean (used if ``"std_dev"``).
-
-    Returns:
-        Threshold value.
+    Strategies:
+        percentile -- threshold at the given percentile of the score distribution.
+        std_dev    -- threshold at mean + n_std standard deviations.
     """
     if strategy == "percentile":
         return float(np.percentile(scores, percentile))
@@ -96,20 +59,7 @@ def build_scores_frame(
     labels: np.ndarray,
     origins: np.ndarray,
 ) -> pd.DataFrame:
-    """Build tidy DataFrame of anomaly scores for evaluation.
-
-    Column layout::
-
-        anomaly_score | sample_type | eventOrigin
-
-    Args:
-        scores: Per-event anomaly scores.
-        labels: Binary labels (0 = background, 1 = signal).
-        origins: Per-event ``eventOrigin`` strings.
-
-    Returns:
-        Scores DataFrame.
-    """
+    """Build a tidy DataFrame of anomaly scores with sample_type and eventOrigin columns."""
     return pd.DataFrame(
         {
             "anomaly_score": scores,

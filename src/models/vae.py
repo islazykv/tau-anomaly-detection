@@ -20,15 +20,7 @@ LOGVAR_CLAMP_MAX = 10.0
 
 
 class VariationalAutoencoder(L.LightningModule):
-    """Variational autoencoder for unsupervised anomaly detection.
-
-    Trained on background-only events. Anomaly scoring can use either
-    reconstruction error or the full ELBO.
-
-    Args:
-        cfg: Typed VAE model configuration.
-        n_features: Number of input features (set by DataModule).
-    """
+    """Variational autoencoder trained on background-only events for anomaly detection."""
 
     def __init__(self, cfg: VAEConfig, n_features: int) -> None:
         super().__init__()
@@ -67,6 +59,7 @@ class VariationalAutoencoder(L.LightningModule):
     # ------------------------------------------------------------------
 
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+        """Encode, reparameterize, and decode, returning (reconstruction, mu, logvar)."""
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         x_hat = self.decode(z)
@@ -136,6 +129,7 @@ class VariationalAutoencoder(L.LightningModule):
     # ------------------------------------------------------------------
 
     def training_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
+        """Compute weighted ELBO loss on one training batch and log components."""
         x, w = batch
         x_hat, mu, logvar = self(x)
         total_loss, recon_loss, kl_loss = self._compute_loss(x, x_hat, mu, logvar, w)
@@ -144,6 +138,7 @@ class VariationalAutoencoder(L.LightningModule):
         return total_loss
 
     def validation_step(self, batch: tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
+        """Compute weighted ELBO loss on one validation batch and log components."""
         x, w = batch
         x_hat, mu, logvar = self(x)
         total_loss, recon_loss, kl_loss = self._compute_loss(x, x_hat, mu, logvar, w)
@@ -187,7 +182,7 @@ class VariationalAutoencoder(L.LightningModule):
         self._last_logvar_mean = logvar.mean().item()
 
     def on_train_end(self) -> None:
-        """Log collapse warnings once at end of training."""
+        """Log posterior collapse warnings once at end of training."""
         mu_var = getattr(self, "_last_mu_var", None)
         logvar_mean = getattr(self, "_last_logvar_mean", None)
         if mu_var is not None and mu_var < 0.1:
@@ -206,6 +201,7 @@ class VariationalAutoencoder(L.LightningModule):
     # ------------------------------------------------------------------
 
     def configure_optimizers(self) -> dict[str, Any]:  # type: ignore[override]
+        """Configure AdamW optimizer with optional LR scheduling."""
         optimizer = torch.optim.AdamW(
             self.parameters(),
             lr=self.cfg.learning_rate,

@@ -39,16 +39,10 @@ def build_search_space(
 ) -> dict[str, Any]:
     """Convert YAML search_space config to Ray Tune sample distributions.
 
-    Supported types: ``int`` (randint), ``float`` (uniform / loguniform),
-    ``categorical`` (choice).
-
-    Args:
-        tuning_cfg: The ``cfg.tuning`` sub-config containing ``search_space``.
-        model_name: ``"ae"`` or ``"vae"`` — selects the matching key in the
-            search_space config.
-
-    Returns:
-        Dict mapping parameter names to Ray Tune sample objects.
+    Types:
+        int         -- random integer (randint).
+        float       -- uniform or log-uniform continuous.
+        categorical -- choice from a list.
     """
     space_cfg = tuning_cfg.search_space[model_name]
     space: dict[str, Any] = {}
@@ -78,11 +72,7 @@ def build_search_space(
 
 
 def build_hidden_sizes(n_layers: int, layer_size: int) -> list[int]:
-    """Build a halving encoder architecture from tunable scalars.
-
-    Example: ``n_layers=3, layer_size=128`` → ``[128, 64, 32]``.
-    Minimum layer width is clamped to 8.
-    """
+    """Build a halving encoder architecture from tunable scalars."""
     return [max(layer_size // (2**i), 8) for i in range(n_layers)]
 
 
@@ -91,11 +81,7 @@ def make_model_config(
     model_name: str,
     base_cfg: DictConfig,
 ) -> AEConfig | VAEConfig:
-    """Build a typed model config by merging trial params into base defaults.
-
-    Non-tunable parameters (activation, loss, lr_scheduler, …) are inherited
-    from the base Hydra config.
-    """
+    """Build a typed model config by merging trial parameters into base defaults."""
     base = dict(OmegaConf.to_container(base_cfg.model, resolve=True))
 
     # Override with trial hyperparameters
@@ -117,11 +103,12 @@ def make_model_config(
 
 
 class _TuneReportCallback(L.Callback):
-    """Lightning callback that reports ``val_loss`` to Ray Tune."""
+    """Lightning callback that reports val_loss to Ray Tune."""
 
     def on_validation_epoch_end(
         self, trainer: L.Trainer, pl_module: L.LightningModule
     ) -> None:
+        """Report validation loss to Ray Tune after each epoch."""
         metrics = trainer.callback_metrics
         if "val_loss" in metrics:
             tune.report({"val_loss": float(metrics["val_loss"])})
@@ -132,11 +119,7 @@ def _train_trial(
     base_cfg: DictConfig,
     dm_kwargs: dict[str, Any],
 ) -> None:
-    """Training function executed by each Ray Tune trial.
-
-    Each trial recreates the DataModule from scratch to guarantee clean
-    state and correct batch_size for this trial's config.
-    """
+    """Training function executed by each Ray Tune trial."""
     import warnings
 
     # Suppress noisy Lightning warnings inside Ray workers
@@ -184,11 +167,7 @@ def _train_trial(
 
 
 def _make_run_config(study_name: str, storage_path: str | None = None) -> RunConfig:
-    """Build a RunConfig compatible with Ray >=2.44 deprecation changes.
-
-    Import ``RunConfig`` from ``ray.tune`` (not ``ray.train``) so that
-    deprecated fields get proper defaults instead of ``"DEPRECATED"`` strings.
-    """
+    """Build a RunConfig compatible with Ray >=2.44 deprecation changes."""
     return RunConfig(name=study_name, verbose=1, storage_path=storage_path)
 
 
@@ -196,16 +175,7 @@ def run_tune(
     cfg: DictConfig,
     dm_kwargs: dict[str, Any],
 ) -> tuple[dict[str, Any], pd.DataFrame]:
-    """Run Ray Tune hyperparameter search with ASHA scheduler.
-
-    Args:
-        cfg: Full Hydra config (must include ``model``, ``tuning``,
-            ``pipeline`` sections).
-        dm_kwargs: Constructor kwargs for :class:`AnomalyDataModule`.
-
-    Returns:
-        Tuple of (best_config, trial_dataframe).
-    """
+    """Run Ray Tune hyperparameter search with ASHA scheduler."""
     # Ensure Ray workers can import project modules (src.*).
     import pyrootutils
 
@@ -276,11 +246,7 @@ def export_best_config(
     best_config: dict[str, Any],
     model_name: str,
 ) -> dict[str, Any]:
-    """Convert best trial config to a model config dict for YAML export.
-
-    Maps the raw search-space values (``n_layers``, ``layer_size``, …)
-    back to model config keys (``hidden_sizes``, …).
-    """
+    """Convert best trial config to a model config dict for YAML export."""
     result: dict[str, Any] = {
         "hidden_sizes": build_hidden_sizes(
             best_config["n_layers"], best_config["layer_size"]

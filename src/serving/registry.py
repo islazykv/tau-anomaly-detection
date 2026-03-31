@@ -1,4 +1,4 @@
-"""Model registry — loads a trained AE/VAE checkpoint for serving."""
+"""Model registry for loading trained AE/VAE checkpoints."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class _ScalerState:
-    """Lightweight scaler extracted from a checkpoint."""
+    """Lightweight scaler state extracted from a checkpoint."""
 
     mean: np.ndarray
     scale: np.ndarray
@@ -38,13 +38,7 @@ class _ScalerState:
 
 
 class ModelRegistry:
-    """Loads a trained model + scaler from a Lightning checkpoint.
-
-    Usage::
-
-        registry = ModelRegistry.from_checkpoint("vae.ckpt", model_name="vae", model_cfg={...})
-        scores, pf_errors = registry.predict(features_array)
-    """
+    """Holds a trained model and scaler loaded from a Lightning checkpoint."""
 
     def __init__(
         self,
@@ -68,14 +62,7 @@ class ModelRegistry:
         model_cfg: dict,
         threshold: float = 0.0,
     ) -> ModelRegistry:
-        """Load model weights and scaler state from a Lightning checkpoint.
-
-        Args:
-            ckpt_path: Path to the ``.ckpt`` file.
-            model_name: ``"ae"`` or ``"vae"``.
-            model_cfg: Dict of model hyperparameters (from Hydra config).
-            threshold: Anomaly threshold. Can be overridden later.
-        """
+        """Load model weights and scaler state from a Lightning checkpoint."""
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 
         # Scaler from DataModule state
@@ -120,14 +107,7 @@ class ModelRegistry:
 
     @torch.no_grad()
     def predict(self, features: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Run inference on raw (un-normalised) features.
-
-        Args:
-            features: ``(batch, n_features)`` array of raw feature values.
-
-        Returns:
-            Tuple of ``(anomaly_scores, per_feature_errors)`` as numpy arrays.
-        """
+        """Run inference on raw unnormalized features and return anomaly scores."""
         x_scaled = self.scaler.transform(features)
         x_tensor = torch.as_tensor(x_scaled, dtype=torch.float32)
 

@@ -16,11 +16,13 @@ class EpochProgressBar(L.Callback):
     """
 
     def on_train_start(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
+        """Initialize the epoch-level tqdm progress bar."""
         self._bar = tqdm(total=trainer.max_epochs, desc="Training", unit="epoch")
 
     def on_validation_epoch_end(
         self, trainer: L.Trainer, pl_module: L.LightningModule
     ) -> None:
+        """Update the progress bar with current epoch metrics."""
         if trainer.sanity_checking:
             return
         metrics = trainer.callback_metrics
@@ -35,6 +37,7 @@ class EpochProgressBar(L.Callback):
         self._bar.update(1)
 
     def on_train_end(self, trainer: L.Trainer, pl_module: L.LightningModule) -> None:
+        """Close the tqdm progress bar."""
         self._bar.close()
 
 
@@ -59,6 +62,7 @@ class MetricTracker(L.Callback):
     def on_train_epoch_end(
         self, trainer: L.Trainer, pl_module: L.LightningModule
     ) -> None:
+        """Record training metrics for the completed epoch."""
         metrics = trainer.callback_metrics
         for key, value in metrics.items():
             if key.startswith("train_"):
@@ -67,6 +71,7 @@ class MetricTracker(L.Callback):
     def on_validation_epoch_end(
         self, trainer: L.Trainer, pl_module: L.LightningModule
     ) -> None:
+        """Record validation metrics for the completed epoch."""
         if trainer.sanity_checking:
             return
         metrics = trainer.callback_metrics

@@ -17,19 +17,7 @@ def compute_tsne(
     seed: int = 1,
     max_samples: int = 10000,
 ) -> np.ndarray:
-    """Compute t-SNE embedding of latent vectors.
-
-    Args:
-        z: Latent vectors, shape ``(n_events, latent_dim)``.
-        n_components: Number of t-SNE dimensions (2 or 3).
-        perplexity: t-SNE perplexity parameter.
-        seed: Random seed for reproducibility.
-        max_samples: Subsample if more events than this (t-SNE is O(n^2)).
-
-    Returns:
-        t-SNE embedding, shape ``(n_events, n_components)`` or
-        ``(max_samples, n_components)`` if subsampled.
-    """
+    """Compute t-SNE embedding of latent vectors, subsampling if needed."""
     if len(z) > max_samples:
         log.info("Subsampling %d -> %d for t-SNE", len(z), max_samples)
         rng = np.random.default_rng(seed)
@@ -55,22 +43,7 @@ def compute_umap(
     seed: int = 1,
     max_samples: int = 50000,
 ) -> np.ndarray:
-    """Compute UMAP embedding of latent vectors.
-
-    Requires ``umap-learn`` to be installed. Falls back to t-SNE if not
-    available.
-
-    Args:
-        z: Latent vectors, shape ``(n_events, latent_dim)``.
-        n_components: Number of UMAP dimensions.
-        n_neighbors: Number of neighbors for UMAP.
-        min_dist: Minimum distance parameter for UMAP.
-        seed: Random seed for reproducibility.
-        max_samples: Subsample if more events than this.
-
-    Returns:
-        UMAP embedding, shape ``(n_events, n_components)`` or subsampled.
-    """
+    """Compute UMAP embedding of latent vectors, falling back to t-SNE if umap-learn is missing."""
     try:
         import umap
     except ImportError:
@@ -99,16 +72,6 @@ def compute_kl_per_dimension(
     mu: np.ndarray,
     logvar: np.ndarray,
 ) -> np.ndarray:
-    """Compute mean KL divergence per latent dimension.
-
-    Useful for identifying collapsed or uninformative latent dimensions.
-
-    Args:
-        mu: Latent means, shape ``(n_events, latent_dim)``.
-        logvar: Latent log-variances, shape ``(n_events, latent_dim)``.
-
-    Returns:
-        Mean KL per dimension, shape ``(latent_dim,)``.
-    """
+    """Compute mean KL divergence per latent dimension for collapse detection."""
     kl = -0.5 * (1 + logvar - mu**2 - np.exp(logvar))
     return kl.mean(axis=0)

@@ -23,22 +23,14 @@ log = logging.getLogger(__name__)
 
 
 def _get_background_origins(cfg: DictConfig) -> set[str]:
-    """Extract background sample IDs from the samples config."""
+    """Return the set of background sample IDs after applying exclusions."""
     bg_cfg = cfg.samples.background
     excludes = set(bg_cfg.get("exclude", []))
     return {s["id"] for s in bg_cfg.samples if s["id"] not in excludes}
 
 
 def tune(cfg: DictConfig) -> None:
-    """Run hyperparameter tuning with Ray Tune.
-
-    Steps:
-        1. Resolve output paths and build DataModule kwargs
-        2. Initialize Ray (local cluster)
-        3. Run ASHA-scheduled hyperparameter search
-        4. Export best config as JSON
-        5. Shutdown Ray
-    """
+    """Run ASHA-scheduled hyperparameter tuning with Ray Tune and save the best config."""
     model_name = cfg.model.name
     log.info("Starting %s hyperparameter tuning", model_name.upper())
     log.info("Config:\n%s", OmegaConf.to_yaml(cfg))

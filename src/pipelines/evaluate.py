@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 
 def _get_background_origins(cfg: DictConfig) -> set[str]:
-    """Extract background sample IDs from the samples config."""
+    """Return the set of background sample IDs after applying exclusions."""
     bg_cfg = cfg.samples.background
     excludes = set(bg_cfg.get("exclude", []))
     return {s["id"] for s in bg_cfg.samples if s["id"] not in excludes}
@@ -39,7 +39,10 @@ def _load_model(
     cfg: DictConfig,
     n_features: int,
 ) -> Autoencoder | VariationalAutoencoder:
-    """Load a trained model from checkpoint."""
+    """Load a trained model from a Lightning checkpoint.
+
+    Options for cfg.model.name: "ae", "vae".
+    """
     model_params = dict(OmegaConf.to_container(cfg.model, resolve=True))  # type: ignore[arg-type]
     if cfg.model.name == "ae":
         model_cfg = AEConfig(**model_params)
@@ -56,15 +59,7 @@ def _load_model(
 
 
 def evaluate(cfg: DictConfig) -> None:
-    """Run evaluation pipeline for a trained AE or VAE.
-
-    Steps:
-        1. Load DataModule and trained checkpoint
-        2. Run prediction on bkg_val + signal events
-        3. Compute per-event anomaly scores
-        4. Compute evaluation metrics (ROC AUC, SIC, per-origin ROC)
-        5. Save scores DataFrame and metrics JSON
-    """
+    """Evaluate a trained AE or VAE and save anomaly scores and metrics."""
     model_name = cfg.model.name
     log.info("Starting %s evaluation", model_name.upper())
 

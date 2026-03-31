@@ -17,13 +17,7 @@ log = logging.getLogger(__name__)
 
 
 class AnomalyDataModule(L.LightningDataModule):
-    """DataModule that trains on background only and holds out signal for evaluation.
-
-    Scaler parameters are stored in the Lightning checkpoint via
-    ``state_dict`` / ``load_state_dict`` — no external joblib files needed.
-
-    Each batch yields ``(features, weights)`` tensors.
-    """
+    """DataModule that trains on background only and holds out signal for evaluation."""
 
     def __init__(
         self,
@@ -121,6 +115,7 @@ class AnomalyDataModule(L.LightningDataModule):
     # ------------------------------------------------------------------
 
     def train_dataloader(self) -> DataLoader:
+        """Return a shuffled DataLoader over the training background."""
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -130,6 +125,7 @@ class AnomalyDataModule(L.LightningDataModule):
         )
 
     def val_dataloader(self) -> DataLoader:
+        """Return a sequential DataLoader over the validation background."""
         return DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
@@ -139,6 +135,7 @@ class AnomalyDataModule(L.LightningDataModule):
         )
 
     def predict_dataloader(self) -> DataLoader:
+        """Return a DataLoader over validation background and signal events."""
         return DataLoader(
             self.predict_dataset,
             batch_size=self.batch_size,
@@ -152,7 +149,12 @@ class AnomalyDataModule(L.LightningDataModule):
     # ------------------------------------------------------------------
 
     def _fit_scaler(self, X: pd.DataFrame) -> None:
-        """Compute scaler parameters from training background."""
+        """Compute scaler parameters from training background.
+
+        Normalization modes:
+            z_score -- standardize to zero mean and unit variance.
+            min_max -- scale to [0, 1] range.
+        """
         values = X.to_numpy(dtype=np.float64)
         if self.normalization == "z_score":
             self.scaler_mean_ = values.mean(axis=0)
@@ -179,13 +181,13 @@ class AnomalyDataModule(L.LightningDataModule):
         return result
 
     def inverse_transform(self, X: np.ndarray) -> np.ndarray:
-        """Reverse the scaler transformation."""
+        """Reverse the scaler transformation to recover original feature values."""
         return X * self.scaler_scale_.astype(np.float32) + self.scaler_mean_.astype(
             np.float32
         )
 
     def state_dict(self) -> dict[str, Any]:
-        """Save scaler params into the Lightning checkpoint."""
+        """Save scaler parameters into the Lightning checkpoint."""
         return {
             "scaler_mean_": self.scaler_mean_,
             "scaler_scale_": self.scaler_scale_,
@@ -194,7 +196,7 @@ class AnomalyDataModule(L.LightningDataModule):
         }
 
     def load_state_dict(self, state_dict: dict[str, Any]) -> None:
-        """Restore scaler params from a Lightning checkpoint."""
+        """Restore scaler parameters from a Lightning checkpoint."""
         self.scaler_mean_ = state_dict["scaler_mean_"]
         self.scaler_scale_ = state_dict["scaler_scale_"]
         self.normalization = state_dict["normalization"]

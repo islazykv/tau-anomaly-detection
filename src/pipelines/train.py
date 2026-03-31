@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 def _get_background_origins(cfg: DictConfig) -> set[str]:
-    """Extract background sample IDs from the samples config."""
+    """Return the set of background sample IDs after applying exclusions."""
     bg_cfg = cfg.samples.background
     excludes = set(bg_cfg.get("exclude", []))
     return {s["id"] for s in bg_cfg.samples if s["id"] not in excludes}
@@ -32,7 +32,10 @@ def _build_model(
     cfg: DictConfig,
     n_features: int,
 ) -> L.LightningModule:
-    """Instantiate AE or VAE based on cfg.model.name."""
+    """Instantiate a model based on cfg.model.name.
+
+    Options: "ae", "vae".
+    """
     name = cfg.model.name
     model_params = dict(OmegaConf.to_container(cfg.model, resolve=True))  # type: ignore[arg-type]
     if name == "ae":
@@ -51,7 +54,7 @@ def _build_trainer(
     models_dir: Path,
     logger: WandbLogger | bool,
 ) -> tuple[L.Trainer, MetricTracker]:
-    """Create a Lightning Trainer with callbacks and logger."""
+    """Create a Lightning Trainer with standard callbacks and optional logger."""
     tracker = MetricTracker()
     callbacks = [
         EarlyStopping(
@@ -84,16 +87,7 @@ def _build_trainer(
 
 
 def train(cfg: DictConfig) -> None:
-    """Run the full training pipeline for AE or VAE.
-
-    Steps:
-        1. Resolve output paths
-        2. Setup DataModule (background-only training)
-        3. Instantiate model (AE or VAE)
-        4. Create Trainer with callbacks and WandB logger
-        5. Fit model
-        6. Save checkpoint
-    """
+    """Run the full training pipeline for AE or VAE and save the checkpoint."""
     model_name = cfg.model.name
     log.info("Starting %s training", model_name.upper())
     log.info("Config:\n%s", OmegaConf.to_yaml(cfg))

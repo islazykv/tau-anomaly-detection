@@ -15,11 +15,7 @@ def _sort_samples(
     groups: list[str],
     order: list[str] | None = None,
 ) -> list[str]:
-    """Sort sample names using a custom order.
-
-    Samples present in *order* appear first (in that order); any remaining
-    samples are appended at the end in alphabetical order.
-    """
+    """Sort sample names by a custom order, with unrecognized names appended alphabetically."""
     if order is None:
         order = _DEFAULT_SAMPLE_ORDER
     order_map = {name: i for i, name in enumerate(order)}
@@ -33,7 +29,7 @@ def plot_sample_balance(
     sample_col: str = "sample_type",
     sample_order: list[str] | None = None,
 ) -> plt.Figure:
-    """Plot unweighted and weighted event counts per sample type."""
+    """Plot unweighted and weighted event counts per sample type as bar charts."""
     ordered = _sort_samples(df[sample_col].unique().tolist(), sample_order)
     counts = df[sample_col].value_counts().reindex(ordered)
     n = len(counts)
@@ -73,7 +69,7 @@ def plot_correlation_matrix(
     features: list[str] | None = None,
     exclude: list[str] | None = None,
 ) -> plt.Figure:
-    """Plot a Pearson correlation heatmap for numeric training features."""
+    """Plot a Pearson correlation heatmap for numeric features."""
     excluded = _NON_TRAINING_COLS | set(exclude or [])
     if features is None:
         features = [
@@ -112,7 +108,7 @@ def plot_feature_distributions(
     n_cols: int = 3,
     n_bins: int = 50,
 ) -> plt.Figure:
-    """Plot per-sample normalized histograms for each feature in a grid layout."""
+    """Plot per-sample normalized histograms for each feature in a grid."""
     groups = _sort_samples(df[group_col].unique().tolist(), sample_order)
     colors = [plt.cm.tab10(i % 10) for i in range(len(groups))]
     n = len(features)

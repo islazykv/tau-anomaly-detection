@@ -12,12 +12,7 @@ def get_sample_labels(
     df: pd.DataFrame,
     display_labels: dict[str, str] | None = None,
 ) -> list[str]:
-    """Derive display labels for each unique eventOrigin in the DataFrame.
-
-    Args:
-        df: DataFrame with an 'eventOrigin' column.
-        display_labels: Optional mapping from eventOrigin to display name.
-    """
+    """Derive display labels for each unique eventOrigin in the DataFrame."""
     if display_labels is None:
         display_labels = {}
     origins = sorted(df["eventOrigin"].unique())
@@ -25,10 +20,6 @@ def get_sample_labels(
 
 
 def get_signal_type_name(origin: str) -> str:
-    """Map a signal eventOrigin prefix to a human-readable name.
-
-    Args:
-        origin: An eventOrigin string (e.g., 'GG_1000_700').
-    """
+    """Map a signal eventOrigin prefix to a human-readable name."""
     prefix = origin.split("_")[0]
     return _DEFAULT_SIGNAL_TYPE_NAMES.get(prefix, origin)
