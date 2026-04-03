@@ -575,17 +575,22 @@ def plot_optimization_history(
     trial_df: pd.DataFrame,
     title: str = "Optimization History",
 ) -> plt.Figure:
-    """Bar chart of val_loss per trial, sorted by trial order."""
+    """Scatter of val_loss per trial with a running-best line overlay."""
     df = trial_df.sort_values("trial_id").reset_index(drop=True)
-    fig, ax = plt.subplots(figsize=(max(6, len(df) * 0.5), 5))
+    x = np.arange(1, len(df) + 1)
+    vals = df["val_loss"].to_numpy()
+    running_best = np.minimum.accumulate(vals)
 
-    colors = ["C1" if v == df["val_loss"].min() else "C0" for v in df["val_loss"]]
-    ax.bar(range(len(df)), df["val_loss"], color=colors)
+    fig, ax = plt.subplots(figsize=(16, 9))
+    ax.scatter(x, vals, s=18, alpha=0.6, zorder=2, label="Objective Value")
+    ax.plot(x, running_best, color="C1", linewidth=2, zorder=3, label="Best Value")
+    margin = max(1, len(df) * 0.03)
+    ax.set_xlim(1 - margin, len(df) + margin)
     ax.set_xlabel("Trial")
-    ax.set_ylabel("val_loss")
+    ax.ticklabel_format(axis="y", style="plain")
+    ax.set_ylabel("Objective Value")
     ax.set_title(title)
-    ax.set_xticks(range(len(df)))
-    ax.set_xticklabels(df["trial_id"], rotation=45, ha="right", fontsize=7)
+    ax.legend()
     ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig
@@ -593,7 +598,7 @@ def plot_optimization_history(
 
 def plot_hyperparameter_importance(
     trial_df: pd.DataFrame,
-    title: str = "Hyperparameter Importance",
+    title: str = "Hyperparameter Importances",
 ) -> plt.Figure:
     """Absolute Spearman correlation of each HP with val_loss."""
     hp_cols = _get_hp_columns(trial_df)
@@ -609,11 +614,12 @@ def plot_hyperparameter_importance(
     values = list(correlations.values())
     order = np.argsort(values)[::-1]
 
-    fig, ax = plt.subplots(figsize=(max(6, len(names) * 0.6), 5))
+    fig, ax = plt.subplots(figsize=(16, 9))
     ax.bar(range(len(names)), [values[i] for i in order])
     ax.set_xticks(range(len(names)))
     ax.set_xticklabels([names[i] for i in order], rotation=45, ha="right")
-    ax.set_ylabel("|Spearman correlation| with val_loss")
+    ax.set_xlabel("Hyperparameter")
+    ax.set_ylabel("Hyperparameter Importance")
     ax.set_title(title)
     ax.set_ylim(0, 1)
     ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
@@ -638,7 +644,7 @@ def plot_parallel_coordinates(
         vmin, vmax = vals.min(), vals.max()
         df_norm[col] = (vals - vmin) / (vmax - vmin) if vmax > vmin else 0.5
 
-    fig, ax = plt.subplots(figsize=(max(8, len(hp_names) * 1.2), 5))
+    fig, ax = plt.subplots(figsize=(16, 9))
     cmap = plt.cm.viridis_r
     vmin, vmax = df["val_loss"].min(), df["val_loss"].max()
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
@@ -671,7 +677,7 @@ def plot_hp_vs_objective(
     n = len(hp_cols)
     n_rows = max(1, (n + n_cols - 1) // n_cols)
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
     axes_flat = np.array(axes).reshape(-1)
 
     for ax, col in zip(axes_flat, hp_cols):
@@ -683,9 +689,72 @@ def plot_hp_vs_objective(
     for ax in axes_flat[n:]:
         ax.set_visible(False)
 
+    for ax in axes_flat[:n]:
+        ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
+
     fig.suptitle(title)
     fig.tight_layout()
-    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes_flat[0])
+    return fig
+
+
+def plot_hp_contour(
+    trial_df: pd.DataFrame,
+    params: tuple[str, str] | None = None,
+    title: str = "Hyperparameter Contour",
+    n_bins: int = 20,
+) -> plt.Figure:
+    """Pairwise contour/heatmap of two HPs colored by val_loss.
+
+    If *params* is not given, the two HPs with the highest absolute Spearman
+    correlation with ``val_loss`` are chosen automatically.
+    """
+    hp_cols = _get_hp_columns(trial_df)
+
+    if params is not None:
+        col_x = f"config/{params[0]}" if f"config/{params[0]}" in hp_cols else params[0]
+        col_y = f"config/{params[1]}" if f"config/{params[1]}" in hp_cols else params[1]
+    else:
+        # Pick the two most important HPs by Spearman correlation
+        correlations: list[tuple[str, float]] = []
+        for col in hp_cols:
+            vals = pd.to_numeric(trial_df[col], errors="coerce")
+            if vals.nunique() > 1:
+                correlations.append(
+                    (col, abs(vals.corr(trial_df["val_loss"], method="spearman")))
+                )
+        correlations.sort(key=lambda t: t[1], reverse=True)
+        col_x = correlations[0][0]
+        col_y = correlations[1][0] if len(correlations) > 1 else correlations[0][0]
+
+    from scipy.interpolate import griddata
+
+    x = pd.to_numeric(trial_df[col_x], errors="coerce").to_numpy()
+    y = pd.to_numeric(trial_df[col_y], errors="coerce").to_numpy()
+    z = trial_df["val_loss"].to_numpy()
+
+    # Build interpolated grid for contour/heatmap
+    xi = np.linspace(x.min(), x.max(), n_bins)
+    yi = np.linspace(y.min(), y.max(), n_bins)
+    xi_grid, yi_grid = np.meshgrid(xi, yi)
+    zi_grid = griddata((x, y), z, (xi_grid, yi_grid), method="cubic")
+
+    fig, ax = plt.subplots(figsize=(16, 9))
+    cmap = plt.cm.viridis_r
+    # Heatmap
+    im = ax.contourf(xi_grid, yi_grid, zi_grid, levels=20, cmap=cmap, alpha=0.8)
+    # Contour lines
+    ax.contour(
+        xi_grid, yi_grid, zi_grid, levels=20, colors="k", linewidths=0.3, alpha=0.4
+    )
+    # Scatter overlay
+    ax.scatter(x, y, c=z, cmap=cmap, s=30, edgecolors="k", linewidth=0.5, zorder=3)
+
+    ax.set_xlabel(_HP_DISPLAY_NAMES.get(col_x, col_x))
+    ax.set_ylabel(_HP_DISPLAY_NAMES.get(col_y, col_y))
+    ax.set_title(title)
+    fig.colorbar(im, ax=ax, label="Objective Value")
+    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
+    fig.tight_layout()
     return fig
 
 

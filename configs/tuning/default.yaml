@@ -1,8 +1,9 @@
 # Ray Tune hyperparameter search — override via CLI:
 #   uv run python run.py stage=tune tuning.num_samples=200
-num_samples: 100
+num_samples: 10
 scheduler: "ASHA"
 direction: "minimize"
+subsample_fraction: 0.1  # fraction of data to use (e.g. 0.1 for 10%)
 
 study_name: "tau-anomaly-detection-tuning"
 

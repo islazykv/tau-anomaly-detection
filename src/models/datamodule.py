@@ -28,6 +28,7 @@ class AnomalyDataModule(L.LightningDataModule):
         batch_size: int = 2048,
         seed: int = 1,
         num_workers: int = 0,
+        subsample_fraction: float = 1.0,
     ) -> None:
         super().__init__()
         self.mc_path = mc_path
@@ -37,6 +38,7 @@ class AnomalyDataModule(L.LightningDataModule):
         self.batch_size = batch_size
         self.seed = seed
         self.num_workers = num_workers
+        self.subsample_fraction = subsample_fraction
 
         # Populated in setup()
         self.train_dataset: TensorDataset
@@ -58,6 +60,18 @@ class AnomalyDataModule(L.LightningDataModule):
     def setup(self, stage: str | None = None) -> None:
         """Read parquet, split bkg/sig, fit scaler, build TensorDatasets."""
         df = pd.read_parquet(self.mc_path)
+
+        if self.subsample_fraction < 1.0:
+            df = df.groupby("sample_type", group_keys=False).sample(
+                frac=self.subsample_fraction,
+                random_state=self.seed,
+            )
+            log.info(
+                "Subsampled to %.0f%%: %d events",
+                self.subsample_fraction * 100,
+                len(df),
+            )
+
         bkg_df, sig_df = split_background_signal(df, self.background_origins)
 
         # Extract features and weights

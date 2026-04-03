@@ -151,6 +151,8 @@ def _train_trial(
 
     trainer = L.Trainer(
         max_epochs=model_cfg.n_epochs,
+        accelerator="gpu" if torch.cuda.is_available() else "cpu",
+        devices=1,
         callbacks=callbacks,
         enable_progress_bar=False,
         enable_checkpointing=False,
@@ -192,9 +194,10 @@ def run_tune(
     search_space = build_search_space(tuning_cfg, model_name)
     log.info("Search space keys: %s", list(search_space.keys()))
 
+    max_t = cfg.model.n_epochs
     scheduler = ASHAScheduler(
-        max_t=cfg.model.n_epochs,
-        grace_period=10,
+        max_t=max_t,
+        grace_period=min(10, max_t),
         reduction_factor=3,
     )
 
@@ -207,20 +210,45 @@ def run_tune(
         resources={"cpu": 1, "gpu": 1 if torch.cuda.is_available() else 0},
     )
 
-    tuner = tune.Tuner(
-        trainable,
-        param_space=search_space,
-        tune_config=TuneConfig(
-            scheduler=scheduler,
-            metric="val_loss",
-            mode="min",
-            num_samples=tuning_cfg.num_samples,
-        ),
-        run_config=_make_run_config(
-            tuning_cfg.study_name,
-            storage_path=os.path.join(root, "data", "ray_results"),
-        ),
-    )
+    storage_path = os.path.join(root, "data", "ray_results")
+    experiment_path = os.path.join(storage_path, tuning_cfg.study_name)
+
+    logging.getLogger("ray.tune").setLevel(logging.WARNING)
+
+    n_requested = tuning_cfg.num_samples
+
+    if os.path.exists(experiment_path):
+        tuner = tune.Tuner.restore(
+            experiment_path,
+            trainable=trainable,
+            param_space=search_space,
+            resume_errored=True,
+        )
+        n_previous = len(tuner.get_results())
+        total = n_previous + n_requested
+        # Bump total so Ray runs num_samples MORE on top of existing trials.
+        tuner._local_tuner._tune_config.num_samples = total
+        log.info(
+            "Resuming: %d previous + %d new → %d total",
+            n_previous,
+            n_requested,
+            total,
+        )
+    else:
+        tuner = tune.Tuner(
+            trainable,
+            param_space=search_space,
+            tune_config=TuneConfig(
+                scheduler=scheduler,
+                metric="val_loss",
+                mode="min",
+                num_samples=n_requested,
+            ),
+            run_config=_make_run_config(
+                tuning_cfg.study_name,
+                storage_path=storage_path,
+            ),
+        )
 
     results = tuner.fit()
     best_result = results.get_best_result(metric="val_loss", mode="min")

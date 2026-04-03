@@ -10,6 +10,7 @@ import ray
 from omegaconf import DictConfig, OmegaConf
 
 from src.models.plots import (
+    plot_hp_contour,
     plot_hp_vs_objective,
     plot_hyperparameter_importance,
     plot_optimization_history,
@@ -38,6 +39,10 @@ def tune(cfg: DictConfig) -> None:
     background_origins = get_background_origins(cfg)
     log.info("Background origins: %s", background_origins)
 
+    subsample = cfg.tuning.subsample_fraction
+    if subsample < 1.0:
+        log.info("Subsampling data to %.0f%%", subsample * 100)
+
     dm_kwargs: dict[str, object] = {
         "mc_path": str(mc_path),
         "background_origins": background_origins,
@@ -45,6 +50,7 @@ def tune(cfg: DictConfig) -> None:
         "val_fraction": cfg.pipeline.val_fraction,
         "batch_size": cfg.model.batch_size,
         "seed": cfg.seed,
+        "subsample_fraction": subsample,
     }
 
     # Ray lifecycle
@@ -66,6 +72,16 @@ def tune(cfg: DictConfig) -> None:
         log.info("Best config saved to %s", results_path)
         log.info("Best model config:\n%s", json.dumps(best_model_config, indent=2))
 
+        # Trial summary
+        n_completed = len(trial_df.dropna(subset=["val_loss"]))
+        n_early_stopped = len(trial_df) - n_completed
+        log.info(
+            "Trials — completed: %d, early-stopped: %d, total: %d",
+            n_completed,
+            n_early_stopped,
+            len(trial_df),
+        )
+
         # Tuning analysis plots
         plots_dir = root / output_paths["plots_dir"] / f"{model_name}_tuning"
         plots_dir.mkdir(parents=True, exist_ok=True)
@@ -80,6 +96,7 @@ def tune(cfg: DictConfig) -> None:
             plot_parallel_coordinates(trial_df), plots_dir / "parallel_coordinates.png"
         )
         save_figure(plot_hp_vs_objective(trial_df), plots_dir / "hp_vs_objective.png")
+        save_figure(plot_hp_contour(trial_df), plots_dir / "hp_contour.png")
         log.info("Tuning plots saved to %s", plots_dir)
     finally:
         if ray.is_initialized():

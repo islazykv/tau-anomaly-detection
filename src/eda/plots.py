@@ -103,14 +103,17 @@ def plot_correlation_matrix(
 def plot_feature_distributions(
     df: pd.DataFrame,
     features: list[str],
-    group_col: str = "eventOrigin",
-    sample_order: list[str] | None = None,
+    group_col: str = "class",
+    class_labels: list[str] | None = None,
     n_cols: int = 3,
     n_bins: int = 50,
 ) -> plt.Figure:
-    """Plot per-sample normalized histograms for each feature in a grid."""
-    groups = _sort_samples(df[group_col].unique().tolist(), sample_order)
-    colors = [plt.cm.tab10(i % 10) for i in range(len(groups))]
+    """Plot per-class normalized histograms for each feature in a grid."""
+    class_order = sorted(df[group_col].unique())
+    if class_labels is None:
+        class_labels = [str(c) for c in class_order]
+
+    colors = [plt.cm.tab10(i % 10) for i in range(len(class_order))]
     n = len(features)
     n_rows = max(1, (n + n_cols - 1) // n_cols)
 
@@ -118,24 +121,24 @@ def plot_feature_distributions(
     axes_flat = np.array(axes).reshape(-1)
 
     for ax, feature in zip(axes_flat, features):
-        for group, color in zip(groups, colors):
-            values = df.loc[df[group_col] == group, feature].dropna()
+        for cls, name, color in zip(class_order, class_labels, colors):
+            values = df.loc[df[group_col] == cls, feature].dropna()
             ax.hist(
                 values,
                 bins=n_bins,
                 density=True,
                 alpha=0.6,
                 color=color,
-                label=group,
+                label=name,
                 histtype="stepfilled",
             )
         ax.set_xlabel(feature)
         ax.set_ylabel("Density")
         ax.legend()
+        ampl.draw_atlas_label(0.05, 0.95, simulation=True, status="final", ax=ax)
 
     for ax in axes_flat[n:]:
         ax.set_visible(False)
 
     fig.tight_layout()
-    fig.suptitle("Feature distributions by sample", y=1.01)
     return fig
