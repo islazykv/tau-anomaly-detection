@@ -222,7 +222,9 @@ def evaluate(cfg: DictConfig) -> None:
     # Latent space
     if model_name == "ae":
         with torch.no_grad():
-            z_np = model.encode(x_orig).numpy()
+            z = model.encode(x_orig)
+            assert isinstance(z, torch.Tensor)
+            z_np = z.numpy()
         fig = plot_latent_histograms(
             z_np,
             labels=dm.predict_labels,
