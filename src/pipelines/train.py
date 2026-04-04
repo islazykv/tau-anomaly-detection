@@ -154,8 +154,41 @@ def train(cfg: DictConfig) -> None:
         tracker.history["train_loss"],
         tracker.history["val_loss"],
         title=f"{model_name.upper()} Loss Plot",
+        lr=tracker.history.get("lr"),
     )
     fig.savefig(plots_dir / f"{model_name}_loss.png", dpi=150, bbox_inches="tight")
     log.info(
         "Saved loss plot: %s", (plots_dir / f"{model_name}_loss.png").relative_to(root)
+    )
+
+    # Compute anomaly scores on predict set and save for downstream evaluation
+    import numpy as np
+    import torch
+
+    from src.models.anomaly import build_scores_frame, reconstruction_error
+
+    all_scores: list[np.ndarray] = []
+    device = next(model.parameters()).device
+
+    with torch.no_grad():
+        for batch in dm.predict_dataloader():
+            x, _w = batch
+            x = x.to(device)
+            if model_name == "vae":
+                x_hat, _mu, _logvar = model(x)
+            else:
+                x_hat = model(x)
+            scores = reconstruction_error(x, x_hat)
+            all_scores.append(scores.cpu().numpy())
+
+    scores_array = np.concatenate(all_scores)
+    scores_df = build_scores_frame(
+        scores=scores_array,
+        labels=dm.predict_labels,
+        origins=dm.predict_origins,
+    )
+    scores_path = dataframes_dir / f"{model_name}_scores.parquet"
+    scores_df.to_parquet(scores_path)
+    log.info(
+        "Saved scores: %s (%d events)", scores_path.relative_to(root), len(scores_df)
     )

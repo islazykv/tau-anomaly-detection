@@ -22,6 +22,7 @@ def plot_loss(
     val_loss: list[float],
     title: str = "Loss Plot",
     loss_type: str = "MSE",
+    lr: list[float] | None = None,
 ) -> plt.Figure:
     """Plot training and validation loss curves with the best epoch marked."""
     epochs = range(1, len(train_loss) + 1)
@@ -40,6 +41,16 @@ def plot_loss(
     ax.set_xlabel("Epoch")
     ax.set_ylabel(f"Loss ({loss_type})")
     ax.set_title(title)
+
+    if lr is not None:
+        ax_lr = ax.twinx()
+        ax_lr.plot(
+            epochs, lr, color="grey", linewidth=1.0, alpha=0.5, label="Learning rate"
+        )
+        ax_lr.set_ylabel("Learning Rate")
+        ax_lr.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        ax.plot([], [], color="grey", linewidth=1.0, alpha=0.5, label="Learning rate")
+
     ax.legend()
     ax.grid(True, alpha=0.3)
     ampl.draw_atlas_label(0.02, 0.97, simulation=True, status="final", ax=ax)

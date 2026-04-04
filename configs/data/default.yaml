@@ -1,0 +1,5 @@
+processed_path: "data/processed"
+batch_size: 256
+test_split: 0.2
+padding_threshold: 3
+nan_threshold: 0.5

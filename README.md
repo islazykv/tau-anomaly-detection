@@ -192,9 +192,10 @@ Step-by-step analysis walkthrough:
 | 02 | `feature_engineering` | Derived feature computation |
 | 03 | `eda` | Distributions, correlations, class balance |
 | 04 | `hyperparameter_tuning` | Ray Tune study analysis |
-| 05a | `ae` | Autoencoder training and reconstruction diagnostics |
-| 05b | `vae` | VAE training, latent space analysis, collapse monitoring |
-| 06 | `evaluation` | AE vs VAE comparison, ROC, SIC curves |
+| 05a | `ae_training` | Autoencoder training on background-only data |
+| 05b | `vae_training` | VAE training with loss decomposition monitoring |
+| 06a | `ae_evaluation` | AE evaluation: ROC, SIC, reconstruction diagnostics, latent space |
+| 06b | `vae_evaluation` | VAE evaluation: ROC, SIC, reconstruction diagnostics, VAE latent analysis |
 
 ## Data & Reproducibility
 

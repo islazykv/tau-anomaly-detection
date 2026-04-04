@@ -24,7 +24,7 @@ env/
 .ipynb_checkpoints/
 
 # Data & artifacts (large files)
-data/
+/data/
 *.parquet
 *.root
 *.h5

@@ -71,10 +71,15 @@ class MetricTracker(L.Callback):
     def on_validation_epoch_end(
         self, trainer: L.Trainer, pl_module: L.LightningModule
     ) -> None:
-        """Record validation metrics for the completed epoch."""
+        """Record validation metrics and learning rate for the completed epoch."""
         if trainer.sanity_checking:
             return
         metrics = trainer.callback_metrics
         for key, value in metrics.items():
             if not key.startswith("train_"):
                 self.history[key].append(float(value))
+
+        # Track learning rate for loss plot diagnostics
+        if trainer.optimizers:
+            lr = trainer.optimizers[0].param_groups[0]["lr"]
+            self.history["lr"].append(lr)
