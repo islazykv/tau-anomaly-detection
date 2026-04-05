@@ -58,12 +58,21 @@ def build_scores_frame(
     scores: np.ndarray,
     labels: np.ndarray,
     origins: np.ndarray,
+    sample_types: np.ndarray | None = None,
 ) -> pd.DataFrame:
-    """Build a tidy DataFrame of anomaly scores with sample_type and eventOrigin columns."""
+    """Build a tidy DataFrame of anomaly scores with sample_type and eventOrigin columns.
+
+    If *sample_types* is provided (from mc.parquet), it is used directly.
+    Otherwise falls back to a binary label derived from *labels*.
+    """
     return pd.DataFrame(
         {
             "anomaly_score": scores,
-            "sample_type": np.where(labels == 0, "background", "signal"),
+            "sample_type": (
+                sample_types
+                if sample_types is not None
+                else np.where(labels == 0, "background", "signal")
+            ),
             "eventOrigin": origins,
         }
     )

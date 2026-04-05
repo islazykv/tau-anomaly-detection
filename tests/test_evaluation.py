@@ -10,7 +10,7 @@ from src.models.evaluation import (
     compute_metrics,
     compute_roc_auc,
     compute_roc_curve,
-    compute_roc_per_origin,
+    compute_roc_per_sample_type,
     compute_sic_curve,
 )
 
@@ -34,25 +34,25 @@ def random_data() -> tuple[np.ndarray, np.ndarray]:
 
 @pytest.fixture()
 def scores_df() -> pd.DataFrame:
-    """Scores DataFrame with multiple signal origins."""
+    """Scores DataFrame with multiple sample types."""
     rng = np.random.default_rng(42)
-    n_bkg, n_sig_a, n_sig_b = 100, 30, 20
+    n_bkg_a, n_bkg_b, n_sig = 60, 40, 50
     return pd.DataFrame(
         {
             "anomaly_score": np.concatenate(
                 [
-                    rng.normal(0, 1, size=n_bkg),
-                    rng.normal(3, 1, size=n_sig_a),
-                    rng.normal(2, 1, size=n_sig_b),
+                    rng.normal(0, 0.5, size=n_bkg_a),
+                    rng.normal(0.5, 0.5, size=n_bkg_b),
+                    rng.normal(3, 1, size=n_sig),
                 ]
             ),
             "sample_type": (
-                ["background"] * n_bkg + ["signal"] * n_sig_a + ["signal"] * n_sig_b
+                ["topquarks"] * n_bkg_a + ["ztautau"] * n_bkg_b + ["signal"] * n_sig
             ),
             "eventOrigin": (
-                ["bkg_ttbar"] * n_bkg
-                + ["GG_1000_100"] * n_sig_a
-                + ["GG_1500_200"] * n_sig_b
+                ["topquarks"] * n_bkg_a
+                + ["ztautau"] * n_bkg_b
+                + ["GG_1000_100"] * n_sig
             ),
         }
     )
@@ -99,20 +99,20 @@ class TestSicCurve:
         assert np.all(np.isfinite(sic))
 
 
-class TestRocPerOrigin:
-    def test_returns_all_origins(self, scores_df: pd.DataFrame) -> None:
-        results = compute_roc_per_origin(scores_df)
-        assert set(results.keys()) == {"GG_1000_100", "GG_1500_200"}
+class TestRocPerSampleType:
+    def test_returns_all_sample_types(self, scores_df: pd.DataFrame) -> None:
+        results = compute_roc_per_sample_type(scores_df)
+        assert set(results.keys()) == {"signal", "topquarks", "ztautau"}
 
     def test_values_are_valid_auc(self, scores_df: pd.DataFrame) -> None:
-        results = compute_roc_per_origin(scores_df)
+        results = compute_roc_per_sample_type(scores_df)
         for auc in results.values():
             assert 0.0 <= auc <= 1.0
 
-    def test_higher_separation_better_auc(self, scores_df: pd.DataFrame) -> None:
-        results = compute_roc_per_origin(scores_df)
-        # GG_1000_100 has mean=3 vs bkg mean=0, GG_1500_200 has mean=2
-        assert results["GG_1000_100"] > results["GG_1500_200"]
+    def test_signal_has_high_auc(self, scores_df: pd.DataFrame) -> None:
+        results = compute_roc_per_sample_type(scores_df)
+        # signal mean=3 vs background mean~0.2 → strong separation
+        assert results["signal"] > 0.9
 
 
 class TestComputeMetrics:
@@ -125,7 +125,7 @@ class TestComputeMetrics:
     def test_with_scores_df(self, perfect_data: tuple, scores_df: pd.DataFrame) -> None:
         labels, scores = perfect_data
         metrics = compute_metrics(labels, scores, scores_df=scores_df)
-        assert "roc_per_origin" in metrics
+        assert "roc_per_sample_type" in metrics
 
     def test_max_sic_positive(self, perfect_data: tuple) -> None:
         labels, scores = perfect_data

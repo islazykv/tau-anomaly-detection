@@ -36,24 +36,42 @@ def compute_sic_curve(
     return tpr / np.sqrt(np.maximum(fpr, epsilon))
 
 
-def compute_roc_per_origin(
+def compute_roc_per_sample_type(
     scores_df: pd.DataFrame,
 ) -> dict[str, float]:
-    """Compute ROC AUC per signal eventOrigin against the full background."""
-    bkg = scores_df[scores_df["sample_type"] == "background"]
-    sig = scores_df[scores_df["sample_type"] == "signal"]
+    """Compute ROC AUC per sample_type.
+
+    Signal: ROC AUC vs all background.
+    Background types: ROC AUC vs remaining background (one-vs-rest).
+    """
+    is_signal = scores_df["sample_type"] == "signal"
+    bkg = scores_df[~is_signal]
+    sig = scores_df[is_signal]
 
     results: dict[str, float] = {}
-    for origin in sorted(sig["eventOrigin"].unique()):
-        sig_origin = sig[sig["eventOrigin"] == origin]
-        combined_scores = np.concatenate(
-            [bkg["anomaly_score"].to_numpy(), sig_origin["anomaly_score"].to_numpy()]
-        )
-        combined_labels = np.concatenate([np.zeros(len(bkg)), np.ones(len(sig_origin))])
-        auc = float(roc_auc_score(combined_labels, combined_scores))
-        results[origin] = auc
 
-    log.info("Computed ROC AUC for %d signal origins", len(results))
+    # Signal vs all background
+    if len(sig) > 0:
+        combined_scores = np.concatenate(
+            [bkg["anomaly_score"].to_numpy(), sig["anomaly_score"].to_numpy()]
+        )
+        combined_labels = np.concatenate([np.zeros(len(bkg)), np.ones(len(sig))])
+        results["signal"] = float(roc_auc_score(combined_labels, combined_scores))
+
+    # Each background type vs remaining background
+    for st in sorted(bkg["sample_type"].unique()):
+        st_mask = bkg["sample_type"] == st
+        st_scores = bkg.loc[st_mask, "anomaly_score"].to_numpy()
+        rest_scores = bkg.loc[~st_mask, "anomaly_score"].to_numpy()
+        if len(st_scores) == 0 or len(rest_scores) == 0:
+            continue
+        combined_scores = np.concatenate([rest_scores, st_scores])
+        combined_labels = np.concatenate(
+            [np.zeros(len(rest_scores)), np.ones(len(st_scores))]
+        )
+        results[st] = float(roc_auc_score(combined_labels, combined_scores))
+
+    log.info("Computed ROC AUC for %d sample types", len(results))
     return results
 
 
@@ -72,7 +90,7 @@ def compute_metrics(
     }
 
     if scores_df is not None:
-        metrics["roc_per_origin"] = compute_roc_per_origin(scores_df)
+        metrics["roc_per_sample_type"] = compute_roc_per_sample_type(scores_df)
 
     log.info(
         "Metrics: ROC AUC=%.4f, max SIC=%.4f", metrics["roc_auc"], metrics["max_sic"]

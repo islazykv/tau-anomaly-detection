@@ -28,7 +28,7 @@ from src.models.plots import (
     plot_reconstruction_error,
     plot_reconstruction_performance,
     plot_roc_curve,
-    plot_roc_per_origin,
+    plot_roc_per_sample_type,
     plot_sic_curve,
 )
 from src.models.vae import VariationalAutoencoder
@@ -124,6 +124,7 @@ def evaluate(cfg: DictConfig) -> None:
         scores=scores_array,
         labels=dm.predict_labels,
         origins=dm.predict_origins,
+        sample_types=dm.predict_sample_types,
     )
 
     # Threshold
@@ -182,13 +183,15 @@ def evaluate(cfg: DictConfig) -> None:
     )
     save_figure(fig, plots_dir / "sic_curve.png")
 
-    # Per-origin ROC
-    if metrics.get("roc_per_origin"):
-        fig = plot_roc_per_origin(
-            metrics["roc_per_origin"],
-            title=f"{model_name.upper()} ROC AUC per Signal Origin",
+    # Per-sample-type ROC
+    if metrics.get("roc_per_sample_type"):
+        display_labels = OmegaConf.to_container(cfg.merge.display_labels, resolve=True)
+        fig = plot_roc_per_sample_type(
+            metrics["roc_per_sample_type"],
+            title=f"{model_name.upper()} ROC AUC per Sample Type",
+            display_labels=display_labels,
         )
-        save_figure(fig, plots_dir / "roc_per_origin.png")
+        save_figure(fig, plots_dir / "roc_per_sample_type.png")
 
     # Per-feature importance
     feat_errors = per_feature_error(x_orig, x_hat).numpy()

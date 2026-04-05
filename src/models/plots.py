@@ -291,9 +291,17 @@ def plot_latent_pairplot(
     z: np.ndarray,
     labels: np.ndarray,
     max_dims: int = 6,
+    max_events: int = 10_000,
     title: str = "Latent Pairplot",
+    seed: int = 42,
 ) -> plt.Figure:
-    """Pairplot of first ``max_dims`` latent dimensions."""
+    """Pairplot of first ``max_dims`` latent dimensions (subsampled for speed)."""
+    if len(z) > max_events:
+        rng = np.random.default_rng(seed)
+        idx = rng.choice(len(z), max_events, replace=False)
+        z = z[idx]
+        labels = labels[idx]
+
     dims = min(z.shape[1], max_dims)
     df = pd.DataFrame(z[:, :dims], columns=[f"z[{i}]" for i in range(dims)])
     df["label"] = np.where(labels == 0, "Background", "Signal")
@@ -522,22 +530,37 @@ def plot_sic_curve(
     return fig
 
 
-def plot_roc_per_origin(
-    roc_per_origin: dict[str, float],
-    title: str = "ROC AUC per Signal Origin",
-) -> plt.Figure:
-    """Horizontal bar chart of ROC AUC per signal origin."""
-    origins = sorted(roc_per_origin.keys())
-    aucs = [roc_per_origin[o] for o in origins]
+_DEFAULT_SAMPLE_ORDER = ["topquarks", "wtaunu", "ztautau", "diboson", "other", "signal"]
 
-    fig, ax = plt.subplots(figsize=(8, max(4, len(origins) * 0.3)))
-    y_pos = np.arange(len(origins))
+
+def plot_roc_per_sample_type(
+    roc_per_sample_type: dict[str, float],
+    title: str = "ROC AUC per Sample Type",
+    display_labels: dict[str, str] | None = None,
+    sample_order: list[str] | None = None,
+) -> plt.Figure:
+    """Horizontal bar chart of ROC AUC per sample type."""
+    order = sample_order or _DEFAULT_SAMPLE_ORDER
+    order_map = {name: i for i, name in enumerate(order)}
+    keys = list(roc_per_sample_type.keys())
+    known = sorted((k for k in keys if k in order_map), key=lambda k: order_map[k])
+    unknown = sorted(k for k in keys if k not in order_map)
+    sample_types = known + unknown
+
+    aucs = [roc_per_sample_type[st] for st in sample_types]
+    tick_labels = [
+        display_labels.get(st, st) if display_labels else st for st in sample_types
+    ]
+
+    fig, ax = plt.subplots(figsize=(8, max(4, len(sample_types) * 0.5)))
+    y_pos = np.arange(len(sample_types))
     ax.barh(y_pos, aucs)
     ax.set_yticks(y_pos)
-    ax.set_yticklabels(origins, fontsize=7)
+    ax.set_yticklabels(tick_labels, fontsize=9)
     ax.set_xlabel("ROC AUC")
     ax.set_title(title)
     ax.set_xlim(0, 1)
+    ax.set_ylim(-0.5, len(sample_types) - 0.5 + 0.8)
     ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig

@@ -46,6 +46,7 @@ class AnomalyDataModule(L.LightningDataModule):
         self.predict_dataset: TensorDataset
         self.predict_labels: np.ndarray  # 0=bkg, 1=sig per predict event
         self.predict_origins: np.ndarray  # eventOrigin per predict event
+        self.predict_sample_types: np.ndarray  # sample_type per predict event
 
         # Scaler params (saved in checkpoint)
         self.scaler_mean_: np.ndarray
@@ -114,6 +115,12 @@ class AnomalyDataModule(L.LightningDataModule):
             [
                 bkg_df["eventOrigin"].loc[X_val.index].to_numpy(),
                 sig_df["eventOrigin"].to_numpy(),
+            ]
+        )
+        self.predict_sample_types = np.concatenate(
+            [
+                bkg_df["sample_type"].loc[X_val.index].to_numpy(),
+                sig_df["sample_type"].to_numpy(),
             ]
         )
         log.info(
