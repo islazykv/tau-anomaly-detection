@@ -7,9 +7,9 @@
 [![PyTorch Lightning](https://img.shields.io/badge/Training-Lightning-792EE5?logo=lightning&logoColor=white)](https://lightning.ai/)
 [![uv](https://img.shields.io/badge/Deps-uv-DE5FE9)](https://docs.astral.sh/uv/)
 
-Anomaly-based supersymmetry search with tau leptons in ATLAS data using unsupervised deep learning.
+Anomaly-based detection with tau leptons in ATLAS data using unsupervised deep learning.
 
-Built on ATLAS Run 2 data, this project implements a full ML pipeline — from ROOT ntuples to anomaly scoring — using Autoencoders (AE) and Variational Autoencoders (VAE). Models are trained on background events only; SUSY signals are detected as anomalies with high reconstruction error.
+Built on ATLAS Run 2 & Run 3 data, this project implements a full ML pipeline — from ROOT ntuples to anomaly scoring — using Autoencoders (AE) and Variational Autoencoders (VAE). To initially evaluate the models' capabilities, they are trained exclusively on background events, allowing signal mass points to be identified as anomalies via high reconstruction errors. If these initial tests prove promising, the models will be deployed on real experimental data.
 
 ## Pipeline
 
