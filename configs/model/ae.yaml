@@ -14,7 +14,7 @@ loss: "mse"                     # mse, smooth_l1, bce (bce requires min_max norm
 normalization: "z_score"        # z_score, min_max
 
 # Training
-n_epochs: 5
+n_epochs: 100
 batch_size: 4096
 learning_rate: 1.0e-3
 weight_decay: 1.0e-5

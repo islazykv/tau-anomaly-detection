@@ -7,9 +7,11 @@
 [![PyTorch Lightning](https://img.shields.io/badge/Training-Lightning-792EE5?logo=lightning&logoColor=white)](https://lightning.ai/)
 [![uv](https://img.shields.io/badge/Deps-uv-DE5FE9)](https://docs.astral.sh/uv/)
 
-Anomaly-based detection with tau leptons in ATLAS data using unsupervised deep learning.
+Anomaly detection with tau leptons in CERN ATLAS data using unsupervised machine learning for the identification of signal events.
 
-Built on ATLAS Run 2 & Run 3 data, this project implements a full ML pipeline — from ROOT ntuples to anomaly scoring — using Autoencoders (AE) and Variational Autoencoders (VAE). To initially evaluate the models' capabilities, they are trained exclusively on background events, allowing signal mass points to be identified as anomalies via high reconstruction errors. If these initial tests prove promising, the models will be deployed on real experimental data.
+Built on ATLAS Run 2 & Run 3 data, this project implements a full ML pipeline — from ROOT ntuples to anomaly scoring — using PyTorch Autoencoders (AE) and Variational Autoencoders (VAE).
+
+To initially evaluate the models' capabilities, they are trained exclusively on background events, allowing signal mass points to be identified as anomalies via high reconstruction errors. If these initial tests prove promising, the models will be deployed on real experimental data.
 
 ## Pipeline
 
