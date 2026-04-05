@@ -28,10 +28,14 @@ def plot_sample_balance(
     df: pd.DataFrame,
     sample_col: str = "sample_type",
     sample_order: list[str] | None = None,
+    display_labels: dict[str, str] | None = None,
 ) -> plt.Figure:
     """Plot unweighted and weighted event counts per sample type as bar charts."""
     ordered = _sort_samples(df[sample_col].unique().tolist(), sample_order)
     counts = df[sample_col].value_counts().reindex(ordered)
+    tick_labels = [
+        display_labels.get(name, name) if display_labels else name for name in ordered
+    ]
     n = len(counts)
 
     has_weights = "weight" in df.columns
@@ -42,7 +46,7 @@ def plot_sample_balance(
 
     axes[0].bar(range(n), counts.values, width=0.5)
     axes[0].set_xticks(range(n))
-    axes[0].set_xticklabels(counts.index, fontsize=10, rotation=45, ha="right")
+    axes[0].set_xticklabels(tick_labels, fontsize=14)
     axes[0].set_xlabel("Sample")
     axes[0].set_ylabel("Event count")
     axes[0].set_title("Unweighted event counts")
@@ -53,7 +57,7 @@ def plot_sample_balance(
         weighted = df.groupby(sample_col)["weight"].sum().reindex(ordered)
         axes[1].bar(range(n), weighted.values, width=0.5)
         axes[1].set_xticks(range(n))
-        axes[1].set_xticklabels(weighted.index, fontsize=10, rotation=45, ha="right")
+        axes[1].set_xticklabels(tick_labels, fontsize=14)
         axes[1].set_xlabel("Sample")
         axes[1].set_ylabel("Weighted event count")
         axes[1].set_title("Weighted event counts")

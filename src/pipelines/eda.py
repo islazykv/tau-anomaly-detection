@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 import pyrootutils
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from src.eda.checks import (
     summarize_feature_ranges,
@@ -52,7 +52,8 @@ def eda(cfg: DictConfig) -> None:
     )
 
     log.info("Generating sample balance plot...")
-    fig = plot_sample_balance(df_mc)
+    display_labels = OmegaConf.to_container(cfg.merge.display_labels, resolve=True)
+    fig = plot_sample_balance(df_mc, display_labels=display_labels)
     save_figure(fig, plots_dir / "sample_balance.png")
 
     log.info("Generating correlation matrix...")
