@@ -137,15 +137,25 @@ def train(cfg: DictConfig) -> None:
     # Fit
     trainer.fit(model, datamodule=dm)
 
-    best_path = getattr(trainer.checkpoint_callback, "best_model_path", None)
-    if best_path:
-        best_path = Path(best_path).relative_to(root)
-    log.info("Training complete — best checkpoint: %s", best_path)
+    import shutil
 
-    # Save final checkpoint with scaler state
+    import torch
+
+    best_model_path = getattr(trainer.checkpoint_callback, "best_model_path", "")
     ckpt_path = models_dir / f"{model_name}.ckpt"
-    trainer.save_checkpoint(ckpt_path)
-    log.info("Saved checkpoint: %s", ckpt_path.relative_to(root))
+
+    if best_model_path:
+        shutil.copy2(best_model_path, ckpt_path)
+        log.info(
+            "Saved best checkpoint (%s) as %s",
+            Path(best_model_path).name,
+            ckpt_path.relative_to(root),
+        )
+        best_ckpt = torch.load(best_model_path, weights_only=False, map_location="cpu")
+        model.load_state_dict(best_ckpt["state_dict"])
+    else:
+        trainer.save_checkpoint(ckpt_path)
+        log.info("Saved final checkpoint: %s", ckpt_path.relative_to(root))
 
     # Save loss plot
     from src.models.plots import plot_loss
@@ -163,7 +173,6 @@ def train(cfg: DictConfig) -> None:
 
     # Compute anomaly scores on predict set and save for downstream evaluation
     import numpy as np
-    import torch
 
     from src.models.anomaly import build_scores_frame, reconstruction_error
 
@@ -186,6 +195,7 @@ def train(cfg: DictConfig) -> None:
         scores=scores_array,
         labels=dm.predict_labels,
         origins=dm.predict_origins,
+        sample_types=dm.predict_sample_types,
     )
     scores_path = dataframes_dir / f"{model_name}_scores.parquet"
     scores_df.to_parquet(scores_path)
