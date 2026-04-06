@@ -32,6 +32,9 @@ def mc_parquet(tmp_path: object) -> str:
             "eventOrigin": (
                 ["bkg_ttbar"] * 80 + ["bkg_wjets"] * 60 + ["sig_stau"] * 60
             ),
+            "sample_type": (
+                ["background"] * 80 + ["background"] * 60 + ["signal"] * 60
+            ),
             "tau_n": rng.integers(1, 4, size=n),
         }
     )
