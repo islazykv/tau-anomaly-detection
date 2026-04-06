@@ -346,10 +346,10 @@ def plot_latent_pairplot(
     g.figure.tight_layout(rect=[0, 0, 1, 0.98])
     # Move legend inside the first diagonal subplot (z[0] vs z[0])
     handles = g._legend.legend_handles
-    labels: list[str] = [t.get_text() for t in g._legend.get_texts()]
+    legend_labels: list[str] = [t.get_text() for t in g._legend.get_texts()]
     g._legend.remove()
     ax0 = g.axes[0, 0]
-    ax0.legend(handles, labels, fontsize=32, loc="upper right", markerscale=4)
+    ax0.legend(handles, legend_labels, fontsize=32, loc="upper right", markerscale=4)
     return g.figure
 
 
