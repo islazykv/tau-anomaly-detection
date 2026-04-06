@@ -215,12 +215,14 @@ def plot_feature_histograms(
         ax.set_ylabel("Density")
         ax.legend()
 
+    for ax in axes_flat[:n_features]:
+        ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
+
     for ax in axes_flat[n_features:]:
         ax.set_visible(False)
 
-    fig.tight_layout()
-    fig.suptitle(title, y=1.01)
-    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes_flat[0])
+    fig.suptitle(title)
+    fig.tight_layout(rect=[0, 0, 1, 0.98])
     return fig
 
 
@@ -233,31 +235,53 @@ def plot_latent_histograms(
     z: np.ndarray,
     labels: np.ndarray | None = None,
     n_cols: int = 4,
-    title: str = "Latent Dimension Histograms",
+    title: str = "Latent Dimension Distributions",
 ) -> plt.Figure:
     """Histogram of each latent dimension, optionally colored by label."""
     latent_dim = z.shape[1]
     n_rows = (latent_dim + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(10 * n_cols, 8 * n_rows))
     axes_flat = axes.flatten() if latent_dim > 1 else [axes]
 
+    from scipy.stats import gaussian_kde
+
+    max_kde_samples = 50_000
+    rng = np.random.default_rng(42)
+
     for i, ax in enumerate(axes_flat[:latent_dim]):
+        lo, hi = np.percentile(z[:, i], [1, 99])
+        margin = (hi - lo) * 0.05
+        x_grid = np.linspace(lo - margin, hi + margin, 200)
+
         if labels is not None:
             for lbl, name in [(0, "Background"), (1, "Signal")]:
-                ax.hist(
-                    z[labels == lbl, i], bins=50, alpha=0.6, label=name, density=True
-                )
-            ax.legend(fontsize=6)
+                data = z[labels == lbl, i]
+                if np.std(data) < 1e-8:
+                    continue
+                if len(data) > max_kde_samples:
+                    data = rng.choice(data, max_kde_samples, replace=False)
+                kde = gaussian_kde(data)
+                ax.plot(x_grid, kde(x_grid), label=name)
+                ax.fill_between(x_grid, kde(x_grid), alpha=0.3)
+            ax.legend()
         else:
-            ax.hist(z[:, i], bins=50, alpha=0.7, density=True)
-        ax.set_title(f"z[{i}]", fontsize=8)
+            data = z[:, i]
+            if np.std(data) >= 1e-8:
+                if len(data) > max_kde_samples:
+                    data = rng.choice(data, max_kde_samples, replace=False)
+                kde = gaussian_kde(data)
+                ax.plot(x_grid, kde(x_grid))
+                ax.fill_between(x_grid, kde(x_grid), alpha=0.3)
+        ax.set_xlim(lo - margin, hi + margin)
+        ax.set_xlabel(f"z[{i}]")
+        ax.set_ylabel("Density")
+        ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
 
     for ax in axes_flat[latent_dim:]:
         ax.set_visible(False)
 
     fig.suptitle(title)
-    fig.tight_layout()
-    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes_flat[0])
+    fig.tight_layout(rect=[0, 0, 1, 0.98])
     return fig
 
 
@@ -268,14 +292,14 @@ def plot_latent_space_2d(
     title: str | None = None,
 ) -> plt.Figure:
     """2D scatter plot of latent space embedding colored by label."""
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(14, 10))
     for lbl, name, color in [(0, "Background", "C0"), (1, "Signal", "C1")]:
         mask = labels == lbl
         ax.scatter(
             embedding[mask, 0],
             embedding[mask, 1],
-            s=2,
-            alpha=0.3,
+            s=8,
+            alpha=0.6,
             label=name,
             color=color,
         )
@@ -303,11 +327,29 @@ def plot_latent_pairplot(
         labels = labels[idx]
 
     dims = min(z.shape[1], max_dims)
-    df = pd.DataFrame(z[:, :dims], columns=[f"z[{i}]" for i in range(dims)])
-    df["label"] = np.where(labels == 0, "Background", "Signal")
 
-    g = sns.pairplot(df, hue="label", plot_kws={"s": 5, "alpha": 0.3}, corner=True)
-    g.figure.suptitle(title, y=1.02)
+    # Clip negative values to 0
+    z_clipped = np.clip(z[:, :dims], 0, None)
+
+    df = pd.DataFrame(z_clipped, columns=[f"z[{i}]" for i in range(dims)])
+    df["Type"] = np.where(labels == 0, "Background", "Signal")
+
+    g = sns.pairplot(
+        df,
+        hue="Type",
+        plot_kws={"s": 20, "alpha": 0.6},
+        corner=False,
+        height=8,
+        aspect=1,
+    )
+    g.figure.suptitle(title, fontsize=48)
+    g.figure.tight_layout(rect=[0, 0, 1, 0.98])
+    # Move legend inside the first diagonal subplot (z[0] vs z[0])
+    handles = g._legend.legend_handles
+    labels = [t.get_text() for t in g._legend.get_texts()]
+    g._legend.remove()
+    ax0 = g.axes[0, 0]
+    ax0.legend(handles, labels, fontsize=32, loc="upper right", markerscale=4)
     return g.figure
 
 
@@ -331,6 +373,7 @@ def plot_latent_mean_spread(
     colors = ["red" if v < 0.1 else "C0" for v in variances]
     ax.bar(dims, variances, color=colors)
     ax.axhline(0.1, color="red", linestyle="--", alpha=0.5, label="Collapse threshold")
+    ax.set_xticks(dims)
     ax.set_xlabel("Latent Dimension")
     ax.set_ylabel("Var(mu)")
     ax.set_title(title)
@@ -386,6 +429,7 @@ def plot_logvar_spread(
     colors = ["red" if m < -8 else "C0" for m in means]
     ax.bar(dims, means, color=colors)
     ax.axhline(-8, color="red", linestyle="--", alpha=0.5, label="Collapse threshold")
+    ax.set_xticks(dims)
     ax.set_xlabel("Latent Dimension")
     ax.set_ylabel("Mean(logvar)")
     ax.set_title(title)
@@ -429,9 +473,11 @@ def plot_mu_vs_logvar(
     logvar_means = logvar.mean(axis=0)
 
     fig, ax = plt.subplots()
-    ax.scatter(mu_means, logvar_means, s=40)
+    ax.scatter(mu_means, logvar_means, s=120)
     for i, (x, y) in enumerate(zip(mu_means, logvar_means)):
-        ax.annotate(str(i), (x, y), fontsize=7, ha="center", va="bottom")
+        ax.annotate(
+            str(i), (x, y), fontsize=20, fontweight="bold", ha="center", va="bottom"
+        )
     ax.set_xlabel("Mean(mu)")
     ax.set_ylabel("Mean(logvar)")
     ax.set_title(title)
@@ -447,7 +493,9 @@ def plot_kl_per_dimension(
 ) -> plt.Figure:
     """Bar chart of mean KL per latent dimension."""
     fig, ax = plt.subplots()
-    ax.bar(np.arange(len(kl_per_dim)), kl_per_dim)
+    dims = np.arange(len(kl_per_dim))
+    ax.bar(dims, kl_per_dim)
+    ax.set_xticks(dims)
     ax.set_xlabel("Latent Dimension")
     ax.set_ylabel("Mean KL Divergence")
     ax.set_title(title)
@@ -458,18 +506,28 @@ def plot_kl_per_dimension(
 def plot_sampled_latent_space(
     z_sampled: np.ndarray,
     z_encoded: np.ndarray,
+    max_points: int = 100_000,
     title: str = "Sampled vs Encoded Latent Space",
+    seed: int = 42,
 ) -> plt.Figure:
     """Compare sampled (from prior) and encoded latent vectors (first 2 dims)."""
-    fig, ax = plt.subplots(figsize=(8, 6))
+    rng = np.random.default_rng(seed)
+    if len(z_encoded) > max_points:
+        idx = rng.choice(len(z_encoded), max_points, replace=False)
+        z_encoded = z_encoded[idx]
+    if len(z_sampled) > max_points:
+        idx = rng.choice(len(z_sampled), max_points, replace=False)
+        z_sampled = z_sampled[idx]
+
+    fig, ax = plt.subplots(figsize=(14, 10))
     ax.scatter(
-        z_encoded[:, 0], z_encoded[:, 1], s=2, alpha=0.3, label="Encoded", color="C0"
+        z_encoded[:, 0], z_encoded[:, 1], s=8, alpha=0.6, label="Encoded", color="C0"
     )
     ax.scatter(
         z_sampled[:, 0],
         z_sampled[:, 1],
-        s=2,
-        alpha=0.3,
+        s=8,
+        alpha=0.6,
         label="Sampled (prior)",
         color="C1",
     )
@@ -560,7 +618,7 @@ def plot_roc_per_sample_type(
     ax.set_xlabel("ROC AUC")
     ax.set_title(title)
     ax.set_xlim(0, 1)
-    ax.set_ylim(-0.5, len(sample_types) - 0.5 + 0.8)
+    ax.set_ylim(-0.5 - 0.8, len(sample_types) - 0.5 + 1.2)
     ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
     fig.tight_layout()
     return fig
@@ -577,6 +635,7 @@ def plot_per_feature_importance(
     ax.bar(np.arange(len(feature_names)), mean_errors[order])
     ax.set_xticks(np.arange(len(feature_names)))
     ax.set_xticklabels([feature_names[i] for i in order], rotation=90, fontsize=7)
+    ax.set_xlim(-0.5, len(feature_names) - 0.5)
     ax.set_ylabel("Mean Squared Error")
     ax.set_title(title)
     ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
@@ -803,20 +862,39 @@ def _plot_per_dim_histograms(
     title: str = "",
     dim_prefix: str = "dim",
 ) -> plt.Figure:
-    """Generic per-dimension histogram grid."""
+    """Generic per-dimension density plot grid."""
+    from scipy.stats import gaussian_kde
+
+    max_kde_samples = 50_000
+    rng = np.random.default_rng(42)
+
     n_dims = values.shape[1]
     n_rows = (n_dims + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 3 * n_rows))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(10 * n_cols, 8 * n_rows))
     axes_flat = axes.flatten() if n_dims > 1 else [axes]
 
     for i, ax in enumerate(axes_flat[:n_dims]):
-        ax.hist(values[:, i], bins=50, alpha=0.7, density=True)
-        ax.set_title(f"{dim_prefix}[{i}]", fontsize=8)
+        lo, hi = np.percentile(values[:, i], [1, 99])
+        margin = (hi - lo) * 0.05
+        x_grid = np.linspace(lo - margin, hi + margin, 200)
+
+        data = values[:, i]
+        if np.std(data) >= 1e-8:
+            if len(data) > max_kde_samples:
+                data = rng.choice(data, max_kde_samples, replace=False)
+            kde = gaussian_kde(data)
+            ax.plot(x_grid, kde(x_grid), label=dim_prefix)
+            ax.fill_between(x_grid, kde(x_grid), alpha=0.3)
+
+        ax.set_xlim(lo - margin, hi + margin)
+        ax.set_xlabel(f"{dim_prefix}[{i}]")
+        ax.set_ylabel("Density")
+        ax.legend()
+        ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=ax)
 
     for ax in axes_flat[n_dims:]:
         ax.set_visible(False)
 
     fig.suptitle(title)
-    fig.tight_layout()
-    ampl.draw_atlas_label(0.05, 0.97, simulation=True, status="final", ax=axes_flat[0])
+    fig.tight_layout(rect=[0, 0, 1, 0.98])
     return fig
