@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 import pyrootutils
 from omegaconf import DictConfig, OmegaConf
@@ -52,7 +53,10 @@ def eda(cfg: DictConfig) -> None:
     )
 
     log.info("Generating sample balance plot...")
-    display_labels = OmegaConf.to_container(cfg.merge.display_labels, resolve=True)
+    display_labels = cast(
+        dict[str, str] | None,
+        OmegaConf.to_container(cfg.merge.display_labels, resolve=True),
+    )
     fig = plot_sample_balance(df_mc, display_labels=display_labels)
     save_figure(fig, plots_dir / "sample_balance.png")
 

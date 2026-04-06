@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import cast
 
 import pyrootutils
 import torch
@@ -185,7 +186,10 @@ def evaluate(cfg: DictConfig) -> None:
 
     # Per-sample-type ROC
     if metrics.get("roc_per_sample_type"):
-        display_labels = OmegaConf.to_container(cfg.merge.display_labels, resolve=True)
+        display_labels = cast(
+            dict[str, str] | None,
+            OmegaConf.to_container(cfg.merge.display_labels, resolve=True),
+        )
         fig = plot_roc_per_sample_type(
             metrics["roc_per_sample_type"],
             title=f"{model_name.upper()} ROC AUC per Sample Type",
